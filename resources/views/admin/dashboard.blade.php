@@ -8,9 +8,11 @@
          </div>
          <div class="ms-md-auto py-2 py-md-0">
             <a href="#" class="btn btn-label-info btn-round me-2">Manage</a>
-            <a href="#"class="btn btn-primary btn-round"><span class="fas fa-plus"></span> Rumah
-               Kos</a>
+            <a href="{{ route('rumah-kos.create') }}" class="btn btn-primary btn-round">
+               <span class="fas fa-plus"></span> Rumah Kos
+            </a>
          </div>
+
       </div>
       {{-- Data Kos  --}}
       <div class="row">
@@ -103,7 +105,8 @@
                   <div class="card-list py-4">
                      <div class="item-list">
                         <div class="avatar">
-                           <img src="{{ asset('assets/img/jm_denis.jpg') }}" alt="..." class="avatar-img rounded-circle" />
+                           <img src="{{ asset('assets/img/jm_denis.jpg') }}" alt="..."
+                              class="avatar-img rounded-circle" />
                         </div>
                         <div class="info-user ms-3">
                            <div class="username">Jimmy Denis</div>

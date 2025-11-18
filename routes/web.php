@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Services\FirestoreService;
 
 Route::get('/', function() {
     return view('auth.login-page'); 
