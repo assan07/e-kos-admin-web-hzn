@@ -4,13 +4,13 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Middleware\AdminAuth;
 use App\Http\Controllers\RumahKosController;
+use App\Http\Controllers\SidebarController;
 
 // Login
 Route::get('/', [AuthController::class, 'loginPage'])->name('login');
 Route::post('/login/process', [AuthController::class, 'login'])->name('login.process');
 Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// Protected dashboard
 Route::middleware([AdminAuth::class])->group(function () {
 
     Route::get('/dashboard', function () {
@@ -18,8 +18,15 @@ Route::middleware([AdminAuth::class])->group(function () {
     })->name('dashboard');
 
     // Rumah Kos CRUD
-    Route::prefix('admin/rumah-kos')->group(function () {
+    Route::prefix('/rumah-kos')->group(function () {
         Route::get('/create', [RumahKosController::class, 'create'])->name('rumah-kos.create');
         Route::post('/store', [RumahKosController::class, 'store'])->name('rumah-kos.store');
+
+        // Detail rumah kos
+        Route::get('/{id}/detail', [RumahKosController::class, 'detail'])->name('rumah-kos.detail');
     });
+
+    // Sidebar AJAX
+    Route::get('/sidebar/kamar/{idKos}', [SidebarController::class, 'fetchKamar']);
+    Route::get('/sidebar/pembayaran/{idKos}', [SidebarController::class, 'fetchPembayaran']);
 });

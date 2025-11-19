@@ -40,7 +40,7 @@
    <!-- CSS Files -->
    <link rel="stylesheet" href="{{ asset('assets/css/bootstrap.min.css') }}" />
    <link rel="stylesheet" href="{{ asset('assets/css/plugins.min.css') }}" />
-   <link rel="stylesheet" href="{{ asset('assets/css/kaiadmin.min.css') }}" /> 
+   <link rel="stylesheet" href="{{ asset('assets/css/kaiadmin.min.css') }}" />
 
 
    <title>E kos </title>
@@ -91,6 +91,7 @@
 
    <!-- Kaiadmin JS -->
    <script src="{{ asset('assets/js/kaiadmin.min.js') }}"></script>
+   @stack('script')
 
 </body>
 

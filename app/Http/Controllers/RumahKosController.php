@@ -3,58 +3,97 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Log;
+use App\Services\FirebaseRestService;
 
 class RumahKosController extends Controller
 {
+    protected $firebase;
+
+    public function __construct(FirebaseRestService $firebase)
+    {
+        $this->firebase = $firebase;
+    }
+
     public function create()
     {
+        if (!Session::has('admin_logged_in')) {
+            return redirect()->route('login')->with('error', 'Silahkan login terlebih dahulu.');
+        }
+
         return view('rumah_kos.create');
     }
 
     public function store(Request $request)
     {
-        // VALIDASI
+        if (!Session::has('admin_logged_in')) {
+            return redirect()->route('login')->with('error', 'Silahkan login terlebih dahulu.');
+        }
+
         $request->validate([
             'nama_kos'      => 'required|string|max:255',
             'lokasi'        => 'required|string|max:255',
             'jumlah_kamar'  => 'required|integer|min:1',
-            'foto'          => 'nullable|string'
+            'foto'          => 'nullable|file|mimes:jpg,jpeg,png|max:2048'
         ]);
 
-        // Firestore API endpoint
-        $projectId = env('FIREBASE_PROJECT_ID');
-        $apiKey    = env('FIREBASE_API_KEY');
-        $url       = "https://firestore.googleapis.com/v1/projects/{$projectId}/databases/(default)/documents/rumah_kos?key={$apiKey}";
+        try {
+            $fotoUrl = '';
+            if ($request->hasFile('foto')) {
+                $file = $request->file('foto');
+                $remotePath = 'foto_kos/' . time() . '_' . Str::random(10) . '.' . $file->extension();
+                $fotoUrl = $this->firebase->uploadFile($file->getRealPath(), $remotePath);
+            }
 
-        // Generate ID kos manual
-        $idKos = 'KOS-' . Str::upper(Str::random(6));
+            $idKos = 'KOS-' . Str::upper(Str::random(6));
 
-        // Build request body
-        $data = [
-            "fields" => [
-                "id_kos" => ["stringValue" => $idKos],
-                "nama_kos" => ["stringValue" => $request->nama_kos],
-                "lokasi" => ["stringValue" => $request->lokasi],
-                "jumlah_kamar" => ["integerValue" => $request->jumlah_kamar],
-                "foto" => ["stringValue" => $request->foto ?? ""],
-                "created_at" => ["timestampValue" => now()->toISOString()],
-                "updated_at" => ["timestampValue" => now()->toISOString()],
-            ]
-        ];
+            $fields = [
+                'id_kos'       => $idKos,
+                'nama_kos'     => $request->nama_kos,
+                'lokasi'       => $request->lokasi,
+                'jumlah_kamar' => (int)$request->jumlah_kamar,
+                'foto'         => $fotoUrl,
+                'created_at'   => now()->toDateTimeString(),
+                'updated_at'   => now()->toDateTimeString(),
+                'created_by'   => Session::get('admin_logged_in')['id']
+            ];
 
-        // Send to Firestore
-        $response = Http::post($url, $data);
+            $this->firebase->createDocument('rumah_kos', $fields);
 
-        if ($response->successful()) {
-            return redirect()
-                ->route('rumah-kos.create')
-                ->with('success', 'Berhasil menambahkan kos baru!');
+            return redirect()->route('rumah-kos.create')->with('success', 'Berhasil menambahkan kos baru!');
+        } catch (\Exception $e) {
+            Log::error('Firebase REST error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal menambahkan kos: ' . $e->getMessage());
+        }
+    }
+
+    //detail rumah kos
+    public function detail($idKos)
+    {
+        if (!Session::has('admin_logged_in')) {
+            return redirect()->route('dashboard');
         }
 
-        return redirect()
-            ->route('rumah-kos.create')
-            ->with('error', 'Gagal menambahkan kos! Silakan coba lagi'.$response->body());
+        try {
+            $firebase = app(FirebaseRestService::class);
+
+            $kosData = $firebase->fetchDocument('rumah_kos', $idKos);
+
+            $fields = $kosData['fields'] ?? [];
+            $kos = [
+                'id_kos' => $idKos,
+                'nama_kos' => $fields['nama_kos']['stringValue'] ?? 'Kos tanpa nama',
+                'lokasi' => $fields['lokasi']['stringValue'] ?? '',
+                'jumlah_kamar' => (int)($fields['jumlah_kamar']['integerValue'] ?? 0),
+                'foto' => $fields['foto']['stringValue'] ?? null,
+            ];
+
+            return view('rumah_kos.detail', compact('kos'));
+        } catch (\Exception $e) {
+            Log::error("Fetch detail kos error: " . $e->getMessage());
+            return redirect()->route('dashboard')->with('error', 'Gagal mengambil data kos.');
+        }
     }
 }

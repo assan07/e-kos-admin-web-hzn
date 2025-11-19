@@ -14,7 +14,7 @@
                <div class="alert alert-danger">{{ session('error') }}</div>
             @endif
 
-            <form action="{{ route('rumah-kos.store') }}" method="POST">
+            <form action="{{ route('rumah-kos.store') }}" method="POST" enctype="multipart/form-data">
                @csrf
 
                <div class="mb-3">
@@ -43,8 +43,7 @@
 
                <div class="mb-3">
                   <label class="form-label">Foto Kos (URL)</label>
-                  <input type="text" name="foto" class="form-control">
-                  <small class="text-muted">Untuk sementara gunakan link URL gambar</small>
+                  <input type="file" name="foto" class="form-control">
                   @error('foto')
                      <span class="text-danger">{{ $message }}</span>
                   @enderror
