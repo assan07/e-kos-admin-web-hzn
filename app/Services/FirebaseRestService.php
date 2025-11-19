@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\File;
 
 class FirebaseRestService
 {
@@ -57,7 +58,7 @@ class FirebaseRestService
 
         return $response->json()['access_token'] ?? null;
     }
-
+    // ====================================Rumah Kos ====================================
     /**
      * Upload file ke Firebase Storage
      */
@@ -82,36 +83,48 @@ class FirebaseRestService
         return "https://firebasestorage.googleapis.com/v0/b/{$this->bucket}/o/" . rawurlencode($remotePath) . "?alt=media";
     }
 
+    // =================================== Firestore Helpers ====================================
+    /** time stap */
+    function fsTimestamp($carbon)
+    {
+        return ['timestampValue' => $carbon->toISOString()];
+    }
+
+
     /**
      * Create document Firestore
      */
-    public function createDocument($collection, $fields)
+
+
+    public function createDocument(string $collectionPath, array $fieldsFormatted, string $docId = null)
     {
         $token = $this->getAccessToken();
-        if (!$token) throw new \Exception("Gagal generate access token");
-
-        $url = "{$this->baseUrl}/{$collection}";
-
-        $formattedFields = [];
-        foreach ($fields as $key => $value) {
-            if (is_int($value)) {
-                $formattedFields[$key] = ['integerValue' => (string)$value];
-            } else {
-                $formattedFields[$key] = ['stringValue' => $value];
-            }
+        if (!$token) {
+            throw new \Exception("Gagal generate access token");
         }
+        // Force formatting
+        $formatted = $this->formatFields($fieldsFormatted);
+
+        $url = $docId
+            ? "{$this->baseUrl}/{$collectionPath}?documentId={$docId}"
+            : "{$this->baseUrl}/{$collectionPath}";
+
+        $payload = ['fields' => $formatted];
 
         $response = Http::withHeaders([
-            'Authorization' => "Bearer $token",
-            'Content-Type'  => 'application/json'
-        ])->post($url, ['fields' => $formattedFields]);
+            'Authorization' => "Bearer {$token}",
+            'Content-Type' => 'application/json',
+        ])->post($url, $payload);
 
-        if (!$response->successful()) {
+        if ($response->failed()) {
+            Log::error("createDocument failed: " . $response->body());
             throw new \Exception("Gagal simpan Firestore: " . $response->body());
         }
 
         return $response->json();
     }
+
+
 
     /**
      * Fetch seluruh dokumen collection
@@ -180,5 +193,190 @@ class FirebaseRestService
         }
 
         return $response->json();
+    }
+
+    // ==================================== Kamar ====================================
+    /**
+     * Upload image kamar ke Firebase Storage
+     */
+    public function uploadImage($file, $folder = 'kamar')
+    {
+        try {
+            $fileName = $folder . '/' . time() . '_' . $file->getClientOriginalName();
+            $url = "https://firebasestorage.googleapis.com/v0/b/{$this->bucket}/o?uploadType=media&name={$fileName}";
+
+            $response = Http::withHeaders([
+                'Content-Type' => $file->getMimeType(),
+            ])->post($url, file_get_contents($file));
+
+            if (!$response->successful()) {
+                throw new \Exception('Upload gagal: ' . $response->body());
+            }
+
+            return "https://firebasestorage.googleapis.com/v0/b/{$this->bucket}/o/" .
+                urlencode($fileName) . "?alt=media";
+        } catch (\Exception $e) {
+            Log::error("Firebase uploadImage error: " . $e->getMessage());
+            return null;
+        }
+    }
+
+
+    public function fetchDocumentById($collection, $documentId)
+    {
+        try {
+            $url = "{$this->baseUrl}/projects/{$this->projectId}/databases/(default)/documents/{$collection}/{$documentId}";
+            $response = Http::get($url);
+
+            if ($response->failed()) {
+                return null;
+            }
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error("fetchDocumentById error: " . $e->getMessage());
+            return null;
+        }
+    }
+    public function updateDocument($collection, $documentId, array $data)
+    {
+        try {
+            $url = "{$this->baseUrl}/projects/{$this->projectId}/databases/(default)/documents/{$collection}/{$documentId}?updateMask.fieldPaths=*";
+
+            $payload = [
+                'fields' => $this->formatFields($data)
+            ];
+
+            $response = Http::patch($url, $payload);
+
+            if ($response->failed()) {
+                throw new \Exception("Update gagal: " . $response->body());
+            }
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error("updateDocument error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function deleteDocument($collection, $documentId)
+    {
+        try {
+            $url = "{$this->baseUrl}/projects/{$this->projectId}/databases/(default)/documents/{$collection}/{$documentId}";
+            $response = Http::delete($url);
+
+            return $response->successful();
+        } catch (\Exception $e) {
+            Log::error("deleteDocument error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function formatFields(array $data)
+    {
+        $fields = [];
+
+        foreach ($data as $key => $value) {
+
+            // Kalau sudah berbentuk FirestoreValue → biarkan.
+            if (is_array($value) && $this->isFirestoreValue($value)) {
+                $fields[$key] = $value;
+                continue;
+            }
+
+            // INTEGER
+            if (is_int($value)) {
+                $fields[$key] = ['integerValue' => (string)$value];
+                continue;
+            }
+
+            // ARRAY → arrayValue
+            if (is_array($value)) {
+
+                $fields[$key] = [
+                    'arrayValue' => [
+                        'values' => array_map(function ($item) {
+
+                            // kalau item sudah FirestoreValue → jangan diganggu
+                            if (is_array($item) && $this->isFirestoreValue($item)) {
+                                return $item;
+                            }
+
+                            // integer
+                            if (is_int($item)) {
+                                return ['integerValue' => (string)$item];
+                            }
+
+                            // default: stringValue
+                            return ['stringValue' => (string)$item];
+                        }, $value)
+                    ]
+                ];
+
+                continue;
+            }
+            // TIMESTAMP (Carbon instance)
+            if ($value instanceof \Carbon\Carbon) {
+                $fields[$key] = [
+                    'timestampValue' => $value->toRfc3339String()
+                ];
+                continue;
+            }
+
+
+            // DEFAULT: string
+            $fields[$key] = ['stringValue' => (string)$value];
+        }
+
+        return $fields;
+    }
+
+
+    private function isFirestoreValue($value)
+    {
+        if (!is_array($value)) return false;
+
+        $allowed = [
+            'stringValue',
+            'integerValue',
+            'booleanValue',
+            'timestampValue',
+            'arrayValue',
+            'mapValue',
+            'nullValue'
+        ];
+
+        return count(array_intersect(array_keys($value), $allowed)) > 0;
+    }
+
+    function buildFirestoreString($value)
+    {
+        return [
+            'stringValue' => $value ?? ''
+        ];
+    }
+    function buildFirestoreInt($value)
+    {
+        return [
+            'integerValue' => (string)($value ?? 0)
+        ];
+    }
+    function buildFirestoreArray(array $items)
+    {
+        return [
+            'arrayValue' => [
+                'values' => array_map(
+                    fn($v) => ['stringValue' => (string) $v],
+                    $items
+                )
+            ]
+        ];
+    }
+    function buildFirestoreTimestamp($carbon)
+    {
+        return [
+            'timestampValue' => $carbon->toRfc3339String()
+        ];
     }
 }

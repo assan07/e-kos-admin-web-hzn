@@ -169,34 +169,66 @@
                   </h5>
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                </div>
+
                <div class="modal-body">
-                  <form id="formTambahKamar">
+                  <form id="formTambahKamar" action="{{ route('kamar.store', $kos['id_kos']) }}" method="POST"
+                     enctype="multipart/form-data">
+
+                     @csrf
+
                      <div class="mb-3">
-                        <label for="namaKamar" class="form-label">Nama Kamar</label>
-                        <input type="text" class="form-control" id="namaKamar" placeholder="Contoh: Kamar A1"
-                           required>
+                        <label class="form-label">Nama Kamar</label>
+                        <input type="text" class="form-control" name="nama_kamar" required>
                      </div>
+
                      <div class="mb-3">
-                        <label for="kapasitas" class="form-label">Kapasitas</label>
-                        <input type="number" class="form-control" id="kapasitas"
-                           placeholder="Jumlah maksimal penghuni" min="1" required>
+                        <label class="form-label">Alamat</label>
+                        <textarea class="form-control" name="alamat" rows="2" required></textarea>
                      </div>
+
                      <div class="mb-3">
-                        <label for="hargaSewa" class="form-label">Harga Sewa (per bulan)</label>
-                        <input type="number" class="form-control" id="hargaSewa" placeholder="Contoh: 1000000"
-                           required>
+                        <label class="form-label">No. Kamar / Kode Kamar</label>
+                        <input type="text" class="form-control" name="no_kamar" required>
                      </div>
+
+                     <div class="mb-3">
+                        <label class="form-label">Foto</label>
+                        <input type="file" class="form-control" name="foto">
+                     </div>
+
+                     <div class="mb-3">
+                        <label class="form-label">Harga Sewa (per bulan)</label>
+                        <input type="number" class="form-control" name="harga" required>
+                     </div>
+
+                     <div class="mb-3">
+                        <label class="form-label">Fasilitas</label>
+                        <textarea class="form-control" name="fasilitas" rows="2"></textarea>
+                     </div>
+
+                     <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                           <option value="kosong">Kosong</option>
+                           <option value="terisi">Terisi</option>
+                           <option value="maintenance">Maintenance</option>
+                        </select>
+                     </div>
+
                   </form>
+
                </div>
+
                <div class="modal-footer">
                   <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                  <button type="button" class="btn btn-primary" id="btnSimpanKamar">
+                  <button type="submit" class="btn btn-primary" id="btnSimpanKamar">
                      <i class="fas fa-save me-1"></i>Simpan
                   </button>
                </div>
             </div>
          </div>
       </div>
+
    </div>
 @endsection
 
@@ -204,6 +236,69 @@
    <script>
       $(document).ready(function() {
          let idKos = '{{ $kos['id_kos'] }}';
+
+         function showAlert(message, type = 'success') {
+            $("#alertBox").html(`
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+         }
+
+
+         $(function() {
+            // Submit via AJAX
+            $('#formTambahKamar').on('submit', function(e) {
+               e.preventDefault();
+
+               let $btn = $('#btnSimpanKamar');
+               $btn.prop('disabled', true).html(
+                  '<span class="spinner-border spinner-border-sm"></span> Menyimpan...');
+
+               let url = $(this).attr('action');
+               let fd = new FormData(this);
+
+               $.ajax({
+                  url: url,
+                  method: 'POST',
+                  data: fd,
+                  processData: false,
+                  contentType: false,
+                  success: function(res) {
+                     showAlert("Kamar berhasil ditambah", "success");
+                     // tutup modal + reload data (atau reload halaman)
+                     $('#modalTambahKamar').modal('hide');
+                     location.reload();
+                  },
+                  error: function(xhr) {
+                     let msg = 'Terjadi kesalahan';
+                     if (xhr.responseJSON) {
+                        if (xhr.responseJSON.messages) {
+                           msg = xhr.responseJSON.messages.join("\n");
+                        } else if (xhr.responseJSON.error) {
+                           msg = xhr.responseJSON.error;
+                        } else {
+                           msg = JSON.stringify(xhr.responseJSON);
+                        }
+                     } else if (xhr.responseText) {
+                        msg = xhr.responseText;
+                     }
+                     showAlert("Gagal menambah kamar", "danger");
+                  },
+                  complete: function() {
+                     $btn.prop('disabled', false).html(
+                        '<i class="fas fa-save me-1"></i>Simpan');
+                  }
+               });
+            });
+
+            // jika tombol berada di luar form, trigger submit ketika tombol diklik
+            $('#btnSimpanKamar').on('click', function(e) {
+               $('#formTambahKamar').submit();
+            });
+         });
+
 
          // Load kamar
          $.getJSON("{{ url('/admin/rumah-kos') }}/" + idKos + "/kamar", function(data) {

@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Middleware\AdminAuth;
 use App\Http\Controllers\RumahKosController;
 use App\Http\Controllers\SidebarController;
+use App\Http\Controllers\KamarController;
 
 // Login
 Route::get('/', [AuthController::class, 'loginPage'])->name('login');
@@ -22,8 +23,26 @@ Route::middleware([AdminAuth::class])->group(function () {
         Route::get('/create', [RumahKosController::class, 'create'])->name('rumah-kos.create');
         Route::post('/store', [RumahKosController::class, 'store'])->name('rumah-kos.store');
 
+
+        // ========== KAMAR ==========
+        // LIST kamar
+        Route::get('/{idKos}/kamar', [KamarController::class, 'index'])->name('kamar.index');
+
+        // TAMBAH kamar
+        Route::post('/{idKos}/kamar', [KamarController::class, 'store'])->name('kamar.store');
+
+        // DETAIL kamar
+        Route::get('/kamar/{idKamar}', [KamarController::class, 'show'])->name('kamar.show');
+
+        // UPDATE kamar
+        Route::put('/kamar/{idKamar}', [KamarController::class, 'update'])->name('kamar.update');
+
+        // DELETE kamar
+        Route::delete('/kamar/{idKamar}', [KamarController::class, 'destroy'])->name('kamar.destroy');
+
         // Detail rumah kos
-        Route::get('/{id}/detail', [RumahKosController::class, 'detail'])->name('rumah-kos.detail');
+        Route::get('/{id}/detail', [RumahKosController::class, 'detail'])
+            ->name('rumah-kos.detail');
     });
 
     // Sidebar AJAX

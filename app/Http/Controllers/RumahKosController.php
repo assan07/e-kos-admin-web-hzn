@@ -39,6 +39,7 @@ class RumahKosController extends Controller
             'foto'          => 'nullable|file|mimes:jpg,jpeg,png|max:2048'
         ]);
 
+
         try {
             $fotoUrl = '';
             if ($request->hasFile('foto')) {
@@ -57,7 +58,6 @@ class RumahKosController extends Controller
                 'foto'         => $fotoUrl,
                 'created_at'   => now()->toDateTimeString(),
                 'updated_at'   => now()->toDateTimeString(),
-                'created_by'   => Session::get('admin_logged_in')['id']
             ];
 
             $this->firebase->createDocument('rumah_kos', $fields);
