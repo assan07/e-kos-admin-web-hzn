@@ -61,7 +61,7 @@ Route::middleware([AdminAuth::class])->group(function () {
         // Proses tambah pembayaran
         Route::post('/add', [PaymentsController::class, 'addPayment'])
             ->name('admin.pembayaran.add');
-        // Route::delete('delete/{idDoc}', [PaymentsController::class, 'delete'])->name('admin.pembayaran.delete');
-
+        Route::delete('delete/{idDoc}', [PaymentsController::class, 'delete'])->name('admin.pembayaran.delete');
+        Route::get('download/{kos}', [PaymentsController::class, 'download'])->name('admin.pembayaran.download');
     });
 });

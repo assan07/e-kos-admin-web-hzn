@@ -495,35 +495,54 @@ class FirebaseRestService
     }
 
     // =================================== Mapping Pembayaran Fields ====================================   
+    /**
+     * Fetch documents from a collection where a given field equals a value.
+     * Implemented by fetching the whole collection then filtering in PHP.
+     *
+     * @param string $collection  koleksi (mis. 'tagihan')
+     * @param string $field       nama field di dokumen (mis. 'nama' atau 'bulan')
+     * @param mixed  $value       nilai yang dicari (string/int)
+     * @return array              array dokumen raw (sama shape dengan fetchCollection)
+     */
     public function fetchCollectionWhere(string $collection, string $field, $value): array
     {
-        $url = "{$this->baseUrl}/projects/{$this->projectId}/databases/(default)/documents/{$collection}?where=" . urlencode(json_encode([
-            'fieldFilter' => [
-                'field' => ['fieldPath' => $field],
-                'op' => 'EQUAL',
-                'value' => ['stringValue' => $value],
-            ]
-        ]));
+        try {
+            // Ambil seluruh dokumen collection (menggunakan helper existing yang sudah menangani access token)
+            $documents = $this->fetchCollection($collection);
 
-        $response = Http::withToken($this->accessToken)
-            ->get($url);
+            $result = [];
 
-        if (!$response->successful()) {
-            Log::error("Firestore where fetch failed: " . $response->body());
+            foreach ($documents as $doc) {
+                $fields = $doc['fields'] ?? [];
+
+                // Ambil nilai field yang relevan (coba stringValue lalu integerValue)
+                $fieldValue = null;
+                if (isset($fields[$field]['stringValue'])) {
+                    $fieldValue = $fields[$field]['stringValue'];
+                } elseif (isset($fields[$field]['integerValue'])) {
+                    $fieldValue = (int)$fields[$field]['integerValue'];
+                } elseif (isset($fields[$field]['arrayValue']['values'])) {
+                    // jika array, coba normalisasi jadi array of string
+                    $vals = array_map(fn($v) => $v['stringValue'] ?? null, $fields[$field]['arrayValue']['values']);
+                    $fieldValue = $vals;
+                }
+
+                // Komparasi string-int robust
+                if ($fieldValue !== null) {
+                    // cast ke string supaya perbandingan konsisten
+                    if ((string)$fieldValue === (string)$value) {
+                        $result[] = $doc;
+                    }
+                }
+            }
+
+            return $result;
+        } catch (\Exception $e) {
+            Log::error("fetchCollectionWhere error: " . $e->getMessage());
             return [];
         }
-
-        $json = $response->json();
-        $documents = $json['documents'] ?? [];
-
-        $result = [];
-
-        foreach ($documents as $doc) {
-            $result[] = $this->mapFirestoreDoc($doc);
-        }
-
-        return $result;
     }
+
 
     // periode parsing
     public function parseBulanToDate($bulan)

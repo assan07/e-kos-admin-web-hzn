@@ -139,14 +139,14 @@
                                     <i class="fas fa-eye"></i> Detail
                                  </a>
 
-                                 {{-- <form action="{{ route('admin.pembayaran.delete', $p['id_pesanan']) }}" method="POST"
+                                 <form action="{{ route('admin.pembayaran.delete', $p['id_pesanan']) }}" method="POST"
                                     class="d-inline" onsubmit="return confirm('Yakin ingin hapus pesanan ini?')">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger">
                                        <i class="fas fa-trash"></i> Hapus
                                     </button>
-                                 </form> --}}
+                                 </form>
                               </div>
                            </td>
                         </tr>
@@ -204,7 +204,12 @@
 
       // Tombol download (modal)
       document.getElementById('btnDownload').addEventListener('click', () => {
-         const kos = document.getElementById('downloadKosSelect').value;
+         const kos = document.getElementById('downloadKosSelect').value.trim();
+         if (!kos) {
+            alert('Pilih kos terlebih dahulu!');
+            return;
+         }
+         // Pastikan encodeURIComponent untuk keamanan URL
          window.location.href = `/admin/pembayaran/download/${encodeURIComponent(kos)}`;
       });
    </script>

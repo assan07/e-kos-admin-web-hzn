@@ -7,6 +7,7 @@ use App\Services\FirebaseRestService;
 use App\Exports\PaymentsExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Log;
+use DateTime;
 
 
 class PaymentsController extends Controller
@@ -177,10 +178,15 @@ class PaymentsController extends Controller
 
     public function addPaymentForm()
     {
-        return view('pembayaran.add_payment');
+        try {
+            // List bulan default bisa dihapus, pakai input type="month" di Blade
+            return view('pembayaran.add_payment');
+        } catch (\Exception $e) {
+            Log::error("Load Add Payment Form error: " . $e->getMessage());
+            return back()->with('error', 'Gagal memuat data form pembayaran.');
+        }
     }
 
-    // ====================== ADD PAYMENT MANUAL ==========================
     public function addPayment(Request $request)
     {
         try {
@@ -189,84 +195,82 @@ class PaymentsController extends Controller
                 'nama' => 'required|string',
                 'kos' => 'required|string',
                 'kamar' => 'required|string',
-                'bulan' => 'required|string',
+                'bulan' => 'required|string', // akan pakai format YYYY-MM
                 'harga' => 'required|integer',
                 'bukti_url' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:3000'
             ]);
 
             $nama = $request->nama;
-            $bulanBaru = $request->bulan;
+            $kos = $request->kos;
+            $kamar = $request->kamar;
+            $bulanInput = $request->bulan; // format "YYYY-MM"
 
-            // STEP 1 — Ambil semua pembayaran user
-            $existing = $this->firebase->fetchCollectionWhere(
-                'tagihan',
-                'nama',
-                $nama
-            );
+            // Convert input ke DateTime object
+            $bulanBaru = DateTime::createFromFormat('Y-m', $bulanInput);
+            if (!$bulanBaru) {
+                return back()->with('error', 'Format bulan tidak valid.');
+            }
+            $bulanBaru->setDate($bulanBaru->format('Y'), $bulanBaru->format('m'), 1); // set day=1
+
+            // Ambil semua pembayaran user
+            $existing = $this->firebase->fetchCollectionWhere('tagihan', 'nama', $nama);
+            if (!is_array($existing)) $existing = [];
 
             // STEP 2 — Cek jika sudah pernah bayar bulan ini
             foreach ($existing as $doc) {
-                if (($doc['fields']['bulan']['stringValue'] ?? '') === $bulanBaru) {
-                    return back()->with('error', 'Bulan ini sudah dibayar sebelumnya.');
+                if (!is_array($doc) || !isset($doc['fields'])) continue;
+                $bulanOldStr = $doc['fields']['bulan']['stringValue'] ?? null;
+                if ($bulanOldStr) {
+                    $bulanOld = DateTime::createFromFormat('Y-m', $this->firebase->parseBulanToDate($bulanOldStr));
+                    if ($bulanOld && $bulanOld->format('Y-m') === $bulanBaru->format('Y-m')) {
+                        return back()->with('error', 'Bulan ini sudah dibayar sebelumnya.');
+                    }
                 }
-            }
-
-            // Convert bulan baru ke date
-            $bulanBaruDate = $this->firebase->parseBulanToDate($bulanBaru);
-            if (!$bulanBaruDate) {
-                return back()->with('error', 'Format bulan tidak valid.');
             }
 
             // STEP 3 — Tentukan bulan terakhir yang sudah dibayar
             $lastPaidDate = null;
-
             foreach ($existing as $doc) {
-                $bulanOld = $doc['fields']['bulan']['stringValue'] ?? null;
-                $dateOld = $this->firebase->parseBulanToDate($bulanOld);
-
-                if ($dateOld && (!$lastPaidDate || $dateOld > $lastPaidDate)) {
-                    $lastPaidDate = $dateOld;
+                if (!is_array($doc) || !isset($doc['fields'])) continue;
+                $bulanOldStr = $doc['fields']['bulan']['stringValue'] ?? null;
+                if ($bulanOldStr) {
+                    $dateOld = DateTime::createFromFormat('Y-m', $this->firebase->parseBulanToDate($bulanOldStr));
+                    if ($dateOld && (!$lastPaidDate || $dateOld > $lastPaidDate)) {
+                        $lastPaidDate = $dateOld;
+                    }
                 }
             }
 
-            // STEP 4 — Validasi aturan anti-lompatan
+            // STEP 4 — Validasi anti-lompatan
             if ($lastPaidDate) {
-
-                // a) Tidak boleh bayar bulan sebelum pembayaran pertama
-                if ($bulanBaruDate < $lastPaidDate) {
-                    return back()->with('error', 'Tidak boleh membayar bulan sebelum pembayaran terakhir.');
-                }
-
-                // b) Tidak boleh skip (harus bulan selanjutnya tepat)
-                $nextMonth = date("Y-m-01", strtotime("+1 month", strtotime($lastPaidDate)));
-
-                if ($bulanBaruDate !== $nextMonth) {
+                $nextMonth = (clone $lastPaidDate)->modify('+1 month');
+                if ($bulanBaru->format('Y-m') !== $nextMonth->format('Y-m')) {
                     return back()->with('error', 'Pembayaran harus berurutan. Bayar bulan ' .
-                        date("F Y", strtotime($nextMonth)) . ' terlebih dahulu.');
+                        $nextMonth->format('F Y') . ' terlebih dahulu.');
                 }
             }
 
-            // ===== LANJUT UPLOAD FILE & SIMPAN =====
-
+            // ===== UPLOAD FILE =====
             $buktiUrl = '-';
-
             if ($request->hasFile('bukti_url')) {
                 $file = $request->file('bukti_url');
                 $fileName = 'bukti_pembayaran_' . time() . '.' . $file->getClientOriginalExtension();
-
                 $firebasePath = "tagihan/bukti/" . $fileName;
-                $upload = $this->firebase->uploadFile($firebasePath, $file->getPathname());
 
-                if ($upload['success']) {
+                $upload = $this->firebase->uploadFile($file->getPathname(), $firebasePath);
+                if (is_array($upload) && isset($upload['url'])) {
                     $buktiUrl = $upload['url'];
+                } elseif (is_string($upload)) {
+                    $buktiUrl = $upload;
                 }
             }
 
+            // ===== SIMPAN KE FIRESTORE =====
             $data = [
                 'nama' => ['stringValue' => $nama],
-                'kos' => ['stringValue' => $request->kos],
-                'kamar' => ['stringValue' => $request->kamar],
-                'bulan' => ['stringValue' => $bulanBaru],
+                'kos' => ['stringValue' => $kos],
+                'kamar' => ['stringValue' => $kamar],
+                'bulan' => ['stringValue' => $bulanBaru->format('Y-m')],
                 'harga' => ['integerValue' => $request->harga],
                 'status_pembayaran' => ['stringValue' => 'sudah_bayar'],
                 'bukti_url' => ['stringValue' => $buktiUrl],
@@ -281,16 +285,52 @@ class PaymentsController extends Controller
         }
     }
 
+    public function delete($id)
+    {
+        try {
+            // Ambil dokumen berdasarkan id
+            $doc = $this->firebase->fetchDocument('tagihan', $id);
+
+            if (!$doc) {
+                return back()->with('error', 'Data pembayaran tidak ditemukan.');
+            }
+
+            // Hapus dokumen
+            $this->firebase->deleteDocument('tagihan', $id);
+
+            return back()->with('success', 'Pembayaran berhasil dihapus.');
+        } catch (\Exception $e) {
+            Log::error("Delete payment error: " . $e->getMessage());
+            return back()->with('error', 'Gagal menghapus pembayaran.');
+        }
+    }
+
 
 
     // ====================== EXPORT EXCEL ==========================
     public function download($kos)
     {
         try {
-            return Excel::download(new PaymentsExport($kos, $this->firebase), "pembayaran_{$kos}.xlsx");
+            Log::info("Memulai download untuk kos: {$kos}");
+
+            // Buat instance export dengan firebase
+            $export = new PaymentsExport($kos, $this->firebase);
+
+            // Ambil koleksi dulu untuk debug
+            $collection = $export->collection();
+            Log::info("Jumlah data yang diambil: " . $collection->count());
+
+            if ($collection->isEmpty()) {
+                Log::warning("Tidak ada data pembayaran ditemukan untuk kos: {$kos}");
+                return back()->with('error', "Tidak ada data pembayaran untuk kos: {$kos}");
+            }
+
+            // Download Excel
+            return Excel::download($export, "pembayaran_{$kos}.xlsx");
         } catch (\Exception $e) {
             Log::error("Download error: " . $e->getMessage());
-            return back()->with('error', 'Gagal download file.');
+            Log::error($e->getTraceAsString());
+            return back()->with('error', 'Gagal download file. Error: ' . $e->getMessage());
         }
     }
 }
