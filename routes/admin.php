@@ -6,6 +6,7 @@ use App\Http\Middleware\AdminAuth;
 use App\Http\Controllers\RumahKosController;
 use App\Http\Controllers\SidebarController;
 use App\Http\Controllers\KamarController;
+use App\Http\Controllers\PesananController;
 
 // Login
 Route::get('/', [AuthController::class, 'loginPage'])->name('login');
@@ -29,6 +30,7 @@ Route::middleware([AdminAuth::class])->group(function () {
         Route::get('/{idDoc}/kamar', [KamarController::class, 'index'])->name('kamar.index');
         Route::post('/{idDoc}/kamar', [KamarController::class, 'store'])->name('kamar.store');
 
+
         Route::prefix('/{idDoc}/kamar')->group(function () {
             Route::get('{idKamar}/detail', [KamarController::class, 'showDetail'])->name('kamar.detail');
             Route::put('{idKamar}/update', [KamarController::class, 'update'])->name('kamar.update');
@@ -39,5 +41,11 @@ Route::middleware([AdminAuth::class])->group(function () {
         // ===== Detail Rumah Kos (WAJIB DITARUH PALING BAWAH) =====
         Route::get('/{id}/detail', [RumahKosController::class, 'detail'])
             ->name('rumah-kos.detail');
+    });
+
+    Route::prefix('/pesanan')->group(function () {
+        Route::get('data-pesanan', [PesananController::class, 'index'])->name('admin.pesanan.index');
+        Route::get('pesanan/{idDoc}', [PesananController::class, 'detail'])->name('admin.pesanan.detail');
+        Route::delete('pesanan/{idDoc}', [PesananController::class, 'delete'])->name('admin.pesanan.delete');
     });
 });

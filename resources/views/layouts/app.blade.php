@@ -8,7 +8,7 @@
    <meta http-equiv="X-UA-Compatible" content="ie=edge">
    <meta name="csrf-token" content="{{ csrf_token() }}">
    
-   @vite(['resources/css/app.css','resources/js/app.js'])
+   @vite(['resources/js/app.js'])
    <link rel="icon" href="{{ asset('assets/img/e-kos1.png') }}" type="image/x-icon" />
 
    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"

@@ -29,9 +29,16 @@
 
             <!-- Rumah Kos -->
             <li class="nav-item">
-               <a data-bs-toggle="collapse" href="#rumahKosMenu" aria-expanded="false">
+               <a href="#rumahKosMenu" aria-expanded="false">
                   <i class="fas fa-home"></i>
                   <p>Rumah Kos</p>
+               </a>
+            </li>
+            <!-- Kamar Kos -->
+            <li class="nav-item">
+               <a data-bs-toggle="collapse" href="#rumahKosMenu" aria-expanded="false">
+                  <i class="fas fa-bed"></i>
+                  <p>Kamar Kos</p>
                   <span class="caret"></span>
                </a>
                <div class="collapse" id="rumahKosMenu">
@@ -46,6 +53,15 @@
 
                   </ul>
                </div>
+            </li>
+
+            {{-- Pesanana --}}
+            <li class="nav-item">
+               <a href="{{ route('admin.pesanan.index') }}" aria-expanded="false">
+                  <i class="fas fa-envelope"></i>
+                  <p>Pesanan</p>
+               </a>
+
             </li>
 
             <!-- Pembayaran -->

@@ -6,7 +6,7 @@
       {{-- Header dengan Gradient --}}
       <div class="mb-4">
          <h2 class="fw-bold text-primary mb-1">
-            <i class="bi bi-door-open me-2"></i>Detail Kamar
+            <i class="bi bi-door-open me-2"></i>Detail Pesanan Kamar
          </h2>
          <h4 class="text-muted">{{ $kamar->nama_kamar ?? '-' }}</h4>
       </div>
@@ -87,14 +87,14 @@
                            <i class="bi bi-info-circle me-1"></i>Status
                         </label>
                         <select name="status" class="form-select form-select-lg" disabled>
-                           <option value="tersedia" {{ $kamar->status == 'tersedia' ? 'selected' : '' }}>
-                              🟢 Tersedia
+                           <option value="diterima" {{ $kamar->status == 'diterima' ? 'selected' : '' }}>
+                              🟢 Diterima
                            </option>
-                           <option value="terisi" {{ $kamar->status == 'terisi' ? 'selected' : '' }}>
-                              🔴 Terisi
+                           <option value="ditolak" {{ $kamar->status == 'ditolak' ? 'selected' : '' }}>
+                              🔴 Ditolak
                            </option>
-                           <option value="maintenance" {{ $kamar->status == 'maintenance' ? 'selected' : '' }}>
-                              🟡 Maintenance
+                           <option value="diproses" {{ $kamar->status == 'diproses' ? 'selected' : '' }}>
+                              🟡 Diproses
                            </option>
                         </select>
                      </div>
@@ -102,10 +102,10 @@
 
                   {{-- Kolom Kanan --}}
                   <div class="col-md-6">
-                     {{-- Foto --}}
+                     {{-- Foto KTP --}}
                      <div class="mb-4">
                         <label class="form-label fw-semibold text-secondary d-block">
-                           <i class="bi bi-image me-1"></i>Foto Kamar
+                           <i class="bi bi-image me-1"></i>Foto KTP
                         </label>
 
                         <div class="border rounded-3 p-3 bg-light text-center" style="min-height: 200px;">
