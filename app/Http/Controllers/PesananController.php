@@ -71,39 +71,49 @@ class PesananController extends Controller
         return view('pesanan.update_pesan_kamar', compact('pesanan'));
     }
 
-    // Method untuk update status pesanan
     public function update(Request $request, $idDoc)
     {
+        // Validasi status
         $request->validate([
-            'status' => 'required|in:diproses,diterima,ditolak',
+            'status_pembayaran' => 'required|in:belum_bayar,menunggu,diterima,ditolak',
         ]);
 
-        $status = $request->input('status');
-
-        // Ambil dokumen lama
-        $oldDoc = $this->firebase->fetchDocument('pesanan', $idDoc);
-        $fields = $oldDoc['fields'] ?? [];
-
-        // Merge status baru
-        $updateData = [
-            'nama' => $fields['nama']['stringValue'] ?? '-',
-            'kos' => $fields['kos']['stringValue'] ?? '-',
-            'kamar' => $fields['kamar']['stringValue'] ?? '-',
-            'harga' => isset($fields['harga']['integerValue']) ? (int)$fields['harga']['integerValue'] : 0,
-            'no_hp' => $fields['no_hp']['stringValue'] ?? '-',
-            'timestamp' => $fields['timestamp']['timestampValue'] ?? null,
-            'status' => $status,
-            'foto_ktp' => $fields['foto_ktp']['stringValue'] ?? null,
-            'user_id' => $fields['user_id']['stringValue'] ?? null,
-        ];
-
         try {
-            $this->firebase->updateDocument('pesanan', $idDoc, $updateData);
-            return redirect()->route('admin.pesanan.detail', $idDoc)
-                ->with('success', 'Status pesanan berhasil diperbarui.');
+            // Ambil data dokumen lama
+            $oldDoc = $this->firebase->fetchDocument('tagihan', $idDoc);
+            if (!$oldDoc) {
+                return back()->with('error', 'Data pembayaran tidak ditemukan.');
+            }
+
+            $fields = $oldDoc['fields'] ?? [];
+
+            // Build ulang data lengkap (full merge)
+            $updateData = [
+                'nama' => $fields['nama']['stringValue'] ?? '-',
+                'kos' => $fields['kos']['stringValue'] ?? '-',
+                'kamar' => $fields['kamar']['stringValue'] ?? '-',
+                'bulan' => $fields['bulan']['stringValue'] ?? '-',
+                'harga' => isset($fields['harga']['integerValue'])
+                    ? (int)$fields['harga']['integerValue']
+                    : 0,
+
+                // FIELD YANG DIUBAH
+                'status_pembayaran' => $request->status_pembayaran,
+
+                // Field opsional lainnya
+                'bukti_url' => $fields['bukti_url']['stringValue'] ?? null,
+                'user_id' => $fields['user_id']['stringValue'] ?? null,
+                'timestamp' => $fields['timestamp']['timestampValue'] ?? null,
+            ];
+
+            // Kirim update ke Firestore
+            $this->firebase->updateDocument('tagihan', $idDoc, $updateData);
+
+            return redirect()
+                ->route('admin.pembayaran.detail', $idDoc)
+                ->with('success', 'Data pembayaran berhasil diperbarui.');
         } catch (\Exception $e) {
-            return redirect()->route('admin.pesanan.detail', $idDoc)
-                ->with('error', 'Gagal memperbarui status: ' . $e->getMessage());
+            return back()->with('error', 'Gagal memperbarui pembayaran: ' . $e->getMessage());
         }
     }
 

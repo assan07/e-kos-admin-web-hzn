@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Http\File;
 use illuminate\Support\Str;
 
+
 class FirebaseRestService
 {
     protected $projectId;
@@ -492,6 +493,68 @@ class FirebaseRestService
 
         return $dto;
     }
+
+    // =================================== Mapping Pembayaran Fields ====================================   
+    public function fetchCollectionWhere(string $collection, string $field, $value): array
+    {
+        $url = "{$this->baseUrl}/projects/{$this->projectId}/databases/(default)/documents/{$collection}?where=" . urlencode(json_encode([
+            'fieldFilter' => [
+                'field' => ['fieldPath' => $field],
+                'op' => 'EQUAL',
+                'value' => ['stringValue' => $value],
+            ]
+        ]));
+
+        $response = Http::withToken($this->accessToken)
+            ->get($url);
+
+        if (!$response->successful()) {
+            Log::error("Firestore where fetch failed: " . $response->body());
+            return [];
+        }
+
+        $json = $response->json();
+        $documents = $json['documents'] ?? [];
+
+        $result = [];
+
+        foreach ($documents as $doc) {
+            $result[] = $this->mapFirestoreDoc($doc);
+        }
+
+        return $result;
+    }
+
+    // periode parsing
+    public function parseBulanToDate($bulan)
+    {
+        $map = [
+            'januari' => 1,
+            'februari' => 2,
+            'maret' => 3,
+            'april' => 4,
+            'mei' => 5,
+            'juni' => 6,
+            'juli' => 7,
+            'agustus' => 8,
+            'september' => 9,
+            'oktober' => 10,
+            'november' => 11,
+            'desember' => 12,
+        ];
+
+        $parts = explode(' ', strtolower($bulan));
+
+        if (count($parts) !== 2) return null;
+
+        $monthName = $parts[0];
+        $year = (int)$parts[1];
+
+        if (!isset($map[$monthName])) return null;
+
+        $month = $map[$monthName];
+
+        // Format: 2025-11-01
+        return sprintf("%04d-%02d-01", $year, $month);
+    }
 }
-
-

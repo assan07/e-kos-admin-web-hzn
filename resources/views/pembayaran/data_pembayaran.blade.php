@@ -89,6 +89,9 @@
                Daftar Pembayaran
             </h5>
             <div class="d-flex gap-2">
+               <a href="{{ route('admin.pembayaran.addForm') }}" class="btn btn-sm btn-outline-info">
+                  <i class="fas fa-plus me-1"></i> Tambah Pembayaran
+               </a>
                <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#downloadModal">
                   <i class="fas fa-download me-1"></i> Download
                </button>
@@ -129,12 +132,22 @@
                               @endif
                            </td>
 
+                           <td class="text-center">
+                              <div class="btn-group" role="group">
+                                 <a href="{{ route('admin.pembayaran.detail', $p['id_pesanan']) }}"
+                                    class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye"></i> Detail
+                                 </a>
 
-                           <td>
-                              <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                 data-bs-target="#statusModal{{ $p['id_pesanan'] }}">
-                                 Ubah Status
-                              </button>
+                                 {{-- <form action="{{ route('admin.pembayaran.delete', $p['id_pesanan']) }}" method="POST"
+                                    class="d-inline" onsubmit="return confirm('Yakin ingin hapus pesanan ini?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                       <i class="fas fa-trash"></i> Hapus
+                                    </button>
+                                 </form> --}}
+                              </div>
                            </td>
                         </tr>
                      @empty

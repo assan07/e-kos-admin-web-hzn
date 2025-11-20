@@ -46,12 +46,22 @@ Route::middleware([AdminAuth::class])->group(function () {
 
     Route::prefix('/pesanan')->group(function () {
         Route::get('data-pesanan', [PesananController::class, 'index'])->name('admin.pesanan.index');
-        Route::get('pesanan/{idDoc}', [PesananController::class, 'detail'])->name('admin.pesanan.detail');
-        Route::delete('pesanan/{idDoc}', [PesananController::class, 'delete'])->name('admin.pesanan.delete');
+        Route::get('{idDoc}', [PesananController::class, 'detail'])->name('admin.pesanan.detail');
+        Route::put('update/{idDoc}', [PesananController::class, 'update'])->name('admin.pesanan.update');
+        Route::delete('{idDoc}', [PesananController::class, 'delete'])->name('admin.pesanan.delete');
     });
     Route::prefix('/pembayaran')->group(function () {
         Route::get('data-pembayaran', [PaymentsController::class, 'index'])->name('admin.pembayaran.index');
-        Route::get('pembayaran/{idDoc}', [PaymentsController::class, 'detail'])->name('admin.pembayaran.detail');
-        Route::delete('pembayaran/{idDoc}', [PaymentsController::class, 'delete'])->name('admin.pembayaran.delete');
+        Route::get('detail/{idDoc}', [PaymentsController::class, 'detail'])->name('admin.pembayaran.detail');
+        Route::put('update/{idDoc}', [PaymentsController::class, 'update'])->name('admin.pembayaran.update');
+        // Form tambah pembayaran
+        Route::get('/add', [PaymentsController::class, 'addPaymentForm'])
+            ->name('admin.pembayaran.addForm');
+
+        // Proses tambah pembayaran
+        Route::post('/add', [PaymentsController::class, 'addPayment'])
+            ->name('admin.pembayaran.add');
+        // Route::delete('delete/{idDoc}', [PaymentsController::class, 'delete'])->name('admin.pembayaran.delete');
+
     });
 });
