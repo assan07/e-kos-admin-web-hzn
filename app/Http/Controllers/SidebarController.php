@@ -34,24 +34,7 @@ class SidebarController extends Controller
             return response()->json([], 500);
         }
     }
+    
 
-    // Fetch pembayaran kos via AJAX
-    public function fetchPembayaran($idKos)
-    {
-        try {
-            $pembayaranDocuments = $this->firebase->fetchSubcollection($idKos, 'pembayaran');
-            $pembayaranList = [];
-            foreach ($pembayaranDocuments as $pembayaranDoc) {
-                $pembayaranList[] = [
-                    'id' => basename($pembayaranDoc['name']),
-                    'amount' => $pembayaranDoc['fields']['amount']['integerValue'] ?? 0,
-                    'status' => $pembayaranDoc['fields']['status']['stringValue'] ?? 'Belum dibayar',
-                ];
-            }
-            return response()->json($pembayaranList);
-        } catch (\Exception $e) {
-            Log::error("Fetch pembayaran error: " . $e->getMessage());
-            return response()->json([], 500);
-        }
-    }
+    
 }

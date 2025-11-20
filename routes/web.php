@@ -5,10 +5,10 @@ use App\Services\FirestoreService;
 
 use Kreait\Firebase\Factory;
 
-Route::get('/test-firebase', function() {
+Route::get('/test-firebase', function () {
     $path = storage_path('app/firebase/service-account.json');
 
-    if(!file_exists($path)) {
+    if (!file_exists($path)) {
         return 'Service account JSON tidak ditemukan!';
     }
 
@@ -16,16 +16,16 @@ Route::get('/test-firebase', function() {
         $factory = (new Factory)->withServiceAccount($path);
         $firebase = $factory->createStorage();
         $bucket = $firebase->getBucket('gs://e-kos-9b7ee');
-        
+
         return 'Credential valid, bucket siap digunakan!';
     } catch (\Exception $e) {
-        return 'Error: '.$e->getMessage();
+        return 'Error: ' . $e->getMessage();
     }
 });
 
 
-Route::get('/', function() {
-    return view('auth.login-page'); 
+Route::get('/', function () {
+    return view('auth.login-page');
 })->name('login');
 
 // Route::get('/dashboard', function() {

@@ -66,22 +66,11 @@
 
             <!-- Pembayaran -->
             <li class="nav-item">
-               <a data-bs-toggle="collapse" href="#pembayaranMenu" aria-expanded="false">
+               <a href="{{ route('admin.pembayaran.index') }}" aria-expanded="false">
                   <i class="fas fa-money-check"></i>
                   <p>Pembayaran</p>
-                  <span class="caret"></span>
                </a>
-               <div class="collapse" id="pembayaranMenu">
-                  <ul class="nav nav-collapse">
-                     @foreach ($kosList as $kos)
-                        <li>
-                           <a href="#" class="pembayaran-link" data-id="{{ $kos['id_kos'] }}">
-                              <span class="sub-item">{{ $kos['nama_kos'] }}</span>
-                           </a>
-                        </li>
-                     @endforeach
-                  </ul>
-               </div>
+
             </li>
          </ul>
       </div>
@@ -108,15 +97,7 @@
             });
          });
 
-         // Pembayaran link klik -> redirect/halaman pembayaran
-         document.querySelectorAll('.pembayaran-link').forEach(function(el) {
-            el.addEventListener('click', function(e) {
-               e.preventDefault();
-               const idKos = this.dataset.id;
-               if (idKos === 'kos_placeholder') return; // Kos kosong, tidak redirect
-               window.location.href = `/pembayaran/${idKos}`;
-            });
-         });
+
 
       });
    </script>

@@ -7,7 +7,7 @@
    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
    <meta http-equiv="X-UA-Compatible" content="ie=edge">
    <meta name="csrf-token" content="{{ csrf_token() }}">
-   
+
    @vite(['resources/js/app.js'])
    <link rel="icon" href="{{ asset('assets/img/e-kos1.png') }}" type="image/x-icon" />
 
@@ -41,7 +41,7 @@
    <link rel="stylesheet" href="{{ asset('assets/css/bootstrap.min.css') }}" />
    <link rel="stylesheet" href="{{ asset('assets/css/plugins.min.css') }}" />
    <link rel="stylesheet" href="{{ asset('assets/css/kaiadmin.min.css') }}" />
-
+   @stack('styles')
 
    <title>E kos </title>
 </head>

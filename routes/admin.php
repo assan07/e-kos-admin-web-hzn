@@ -6,6 +6,7 @@ use App\Http\Middleware\AdminAuth;
 use App\Http\Controllers\RumahKosController;
 use App\Http\Controllers\SidebarController;
 use App\Http\Controllers\KamarController;
+use App\Http\Controllers\PaymentsController;
 use App\Http\Controllers\PesananController;
 
 // Login
@@ -45,8 +46,12 @@ Route::middleware([AdminAuth::class])->group(function () {
 
     Route::prefix('/pesanan')->group(function () {
         Route::get('data-pesanan', [PesananController::class, 'index'])->name('admin.pesanan.index');
-        Route::get('{idDoc}', [PesananController::class, 'detail'])->name('admin.pesanan.detail');
-        Route::put('update/{idDoc}', [PesananController::class, 'update'])->name('admin.pesanan.update');
-        Route::delete('{idDoc}', [PesananController::class, 'delete'])->name('admin.pesanan.delete');
+        Route::get('pesanan/{idDoc}', [PesananController::class, 'detail'])->name('admin.pesanan.detail');
+        Route::delete('pesanan/{idDoc}', [PesananController::class, 'delete'])->name('admin.pesanan.delete');
+    });
+    Route::prefix('/pembayaran')->group(function () {
+        Route::get('data-pembayaran', [PaymentsController::class, 'index'])->name('admin.pembayaran.index');
+        Route::get('pembayaran/{idDoc}', [PaymentsController::class, 'detail'])->name('admin.pembayaran.detail');
+        Route::delete('pembayaran/{idDoc}', [PaymentsController::class, 'delete'])->name('admin.pembayaran.delete');
     });
 });
