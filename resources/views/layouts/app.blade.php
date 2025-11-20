@@ -7,8 +7,8 @@
    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
    <meta http-equiv="X-UA-Compatible" content="ie=edge">
    <meta name="csrf-token" content="{{ csrf_token() }}">
-   {{-- intall firebase --}}
-   {{-- @vite(['resources/css/app.css','resources/js/app.js']) --}}
+   
+   @vite(['resources/css/app.css','resources/js/app.js'])
    <link rel="icon" href="{{ asset('assets/img/e-kos1.png') }}" type="image/x-icon" />
 
    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"

@@ -125,40 +125,6 @@
          </div>
       </div>
 
-      <!-- Tabel Riwayat Pembayaran -->
-      <div class="card border-0 shadow-sm">
-         <div class="card-header bg-white py-3">
-            <h5 class="mb-0">
-               <i class="fas fa-receipt me-2"></i>Riwayat Pembayaran
-            </h5>
-         </div>
-         <div class="card-body p-0">
-            <div class="table-responsive">
-               <table class="table table-hover mb-0" id="tabelPembayaran">
-                  <thead class="table-light">
-                     <tr>
-                        <th>ID Pembayaran</th>
-                        <th>Jumlah</th>
-                        <th>Status</th>
-                        <th class="text-center">Aksi</th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                     <tr>
-                        <td colspan="4" class="text-center py-4">
-                           <div class="spinner-border spinner-border-sm text-primary" role="status">
-                              <span class="visually-hidden">Loading...</span>
-                           </div>
-                           <p class="text-muted mb-0 mt-2 small">Memuat data...</p>
-                        </td>
-                     </tr>
-                  </tbody>
-               </table>
-            </div>
-         </div>
-      </div>
-
-     
       <!-- Modal Tambah Kamar -->
       <div class="modal fade" id="modalTambahKamar" tabindex="-1" aria-labelledby="modalTambahKamarLabel"
          aria-hidden="true">
@@ -234,19 +200,23 @@
                   if (penghuni > 0) kamarTerisi++;
 
                   tbody += `<tr>
-                    <td><span class="badge bg-light text-dark">${k.id_kamar}</span></td>
-                    <td><strong>${k.nama_kamar}</strong></td>
-                    <td>${penghuni>0 ? `<span class="badge bg-success">${penghuni} Orang</span>` : `<span class="badge bg-secondary">Kosong</span>`}</td>
-                    <td class="text-center">
-                        <a href="/admin/rumah-kos/${idDoc}/kamar/${k.id_kamar}/detail" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i> Detail</a>
-                        <button class="btn btn-sm btn-outline-danger btn-hapus-kamar" 
-                                data-id-kamar="${k.id_kamar}" 
-                                data-id-doc="${idDoc}">
-                            <i class="fas fa-trash"></i> Hapus
-                        </button>
-                    </td>
-                </tr>`;
+                        <td><span class="badge bg-light text-dark">${k.id_kamar}</span></td>
+                        <td><strong>${k.nama_kamar}</strong></td>
+                        <td>${penghuni>0 ? `<span class="badge bg-success">${penghuni} Orang</span>` : `<span class="badge bg-secondary">Kosong</span>`}</td>
+                        <td class="text-center">
+                           <a href="/admin/rumah-kos/${idDoc}/kamar/${k.id_kamar}/detail"
+                              class="btn btn-sm btn-outline-primary">
+                              <i class="fas fa-eye"></i> Detail
+                           </a>
+                           <button class="btn btn-sm btn-danger btn-hapus-kamar"
+                                    data-id-kamar="${k.id_kamar}"
+                                    data-id-doc="${idDoc}">
+                              <i class="fas fa-trash"></i> Hapus
+                           </button>
+                        </td>
+                     </tr>`;
                });
+
 
                $('#tabelKamar tbody').html(tbody);
                $('#totalPenghuni').text(totalPenghuni);
@@ -298,8 +268,6 @@
                text: "Kamar ini akan dihapus secara permanen!",
                icon: 'warning',
                showCancelButton: true,
-               confirmButtonColor: '#3085d6',
-               cancelButtonColor: '#d33',
                confirmButtonText: 'Ya, hapus!',
                cancelButtonText: 'Batal'
             }).then((result) => {
@@ -319,18 +287,19 @@
                            timer: 1500,
                            showConfirmButton: false
                         }).then(() => {
-                           if (res.success) loadTabelKamar();
+                           if (res.success) loadTabelKamar(); // reload tabel
                         });
                      },
                      error: function(xhr) {
                         console.error(xhr.responseJSON || xhr.responseText);
-                        Swal.fire('Gagal', 'Kamar gagal dihapus. Cek console untuk detail.',
-                           'error');
+                        Swal.fire('Gagal', 'Kamar gagal dihapus.', 'error');
                      }
                   });
                }
             });
          });
+
+
       });
    </script>
 @endpush

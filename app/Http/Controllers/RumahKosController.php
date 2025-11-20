@@ -94,7 +94,7 @@ class RumahKosController extends Controller
                 'foto' => $fields['foto']['stringValue'] ?? null,
             ];
 
-            return view('rumah_kos.detail', compact('kos'));
+            return view('kamar_kos.data_kamar', compact('kos'));
         } catch (\Exception $e) {
             Log::error("Fetch detail kos error: " . $e->getMessage());
             return redirect()->route('dashboard')->with('error', 'Gagal mengambil data kos.');

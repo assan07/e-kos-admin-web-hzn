@@ -65,7 +65,7 @@
                         @enderror
                      </div>
 
-                                          {{-- Harga Sewa --}}
+                     {{-- Harga Sewa --}}
                      <div class="mb-4">
                         <label class="form-label fw-semibold text-secondary">
                            <i class="bi bi-cash-coin me-1"></i>Harga Sewa (per bulan)
@@ -146,8 +146,9 @@
 
                {{-- Tombol Aksi --}}
                <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
-                  <a href="{{ url()->previous() }}" class="btn btn-outline-secondary btn-lg px-4">
-                     <i class="bi bi-arrow-left me-2"></i>Kembali
+                  <a href="{{ route('admin.kamar.index', $idDoc) }}" class="btn btn-secondary">
+                     <i class="fas fa-arrow-left"></i> Kembali
+                  </a>
                   </a>
 
                   <div class="d-flex gap-2">

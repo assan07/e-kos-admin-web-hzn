@@ -25,13 +25,15 @@ Route::middleware([AdminAuth::class])->group(function () {
         Route::get('/create', [RumahKosController::class, 'create'])->name('rumah-kos.create');
         Route::post('/store', [RumahKosController::class, 'store'])->name('rumah-kos.store');
 
-        // ===== KAMAR (pindah ke atas sebelum detail rumah kos) =====
+        // ===== KAMAR =====
         Route::get('/{idDoc}/kamar', [KamarController::class, 'index'])->name('kamar.index');
         Route::post('/{idDoc}/kamar', [KamarController::class, 'store'])->name('kamar.store');
 
         Route::prefix('/{idDoc}/kamar')->group(function () {
             Route::get('{idKamar}/detail', [KamarController::class, 'showDetail'])->name('kamar.detail');
             Route::put('{idKamar}/update', [KamarController::class, 'update'])->name('kamar.update');
+            Route::delete('{idKamar}', [KamarController::class, 'destroy'])
+                ->name('admin.kamar.destroy');
         });
 
         // ===== Detail Rumah Kos (WAJIB DITARUH PALING BAWAH) =====

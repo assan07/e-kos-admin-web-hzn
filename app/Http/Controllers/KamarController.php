@@ -144,7 +144,7 @@ class KamarController extends Controller
             // Gunakan helper mapKamarFieldsToDto
             $kamar = $this->firebase->mapKamarFieldsToDto($idKamar, $fields, $alamat_kos);
 
-            return view('kamar_kos.show_kamar', compact('kamar', 'idDoc'));
+            return view('kamar_kos.update_kamar', compact('kamar', 'idDoc'));
         } catch (\Exception $e) {
             Log::error("ShowDetail kamar error: " . $e->getMessage());
             return back()->with('error', 'Gagal mengambil detail kamar.');
