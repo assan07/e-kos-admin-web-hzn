@@ -32,7 +32,7 @@
                            <td>{{ $item['kos'] }}</td>
                            <td>{{ $item['kamar'] }}</td>
                            <td class="px-4 py-2 border">
-                              {{ \Carbon\Carbon::parse($item['timestamp'])->format('Y-m-d') }}
+                              {{ $item['timestamp'] ?? '-' }}
                            </td>
 
                            <td class="text-center">

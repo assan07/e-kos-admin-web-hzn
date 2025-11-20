@@ -20,13 +20,14 @@ class PesananController extends Controller
     {
         $pesananCollection = $this->firebase->fetchCollection('pesanan');
 
-        $pesanan = [];
 
         Log::info('Pesanan Collection:', $pesananCollection);
 
-        foreach ($pesananCollection as $idDoc => $doc) {
+        foreach ($pesananCollection as $doc) {
+            // idDoc di Firestore ada di akhir path 'name'
+            $pathParts = explode('/', $doc['name']);
+            $idDoc = end($pathParts);
 
-            // Extract value dari Firestore raw format
             $fields = $doc['fields'] ?? [];
 
             $pesanan[] = [
@@ -37,8 +38,7 @@ class PesananController extends Controller
                 'harga'     => isset($fields['harga']['integerValue']) ? (int)$fields['harga']['integerValue'] : 0,
                 'no_hp'     => $fields['no_hp']['stringValue'] ?? '-',
                 'status'    => $fields['status']['stringValue'] ?? 'diproses',
-                'timestamp' => isset($fields['timestamp']['timestampValue']) ? \Carbon\Carbon::parse($fields['timestamp']['timestampValue'])->format('Y-m-d'): '-',
-
+                'timestamp' => isset($fields['timestamp']['timestampValue']) ? \Carbon\Carbon::parse($fields['timestamp']['timestampValue'])->format('Y-m-d') : '-',
                 'foto_ktp'  => $fields['foto_ktp']['stringValue'] ?? null,
                 'user_id'   => $fields['user_id']['stringValue'] ?? null,
             ];
@@ -50,24 +50,63 @@ class PesananController extends Controller
     // Menampilkan detail pesanan
     public function detail($idDoc)
     {
-        $pesanan = $this->firebase->fetchDocument('pesanan', $idDoc);
+        $doc = $this->firebase->fetchDocument('pesanan', $idDoc);
 
-        // Pastikan field ada, untuk mempermudah di Blade
+        // Pastikan field ada
         $pesanan = [
-            'idDoc'     => $idDoc,
-            'nama'      => $pesanan['nama'] ?? '-',
-            'kos'       => $pesanan['kos'] ?? '-',
-            'kamar'     => $pesanan['kamar'] ?? '-',
-            'harga'     => $pesanan['harga'] ?? 0,
-            'no_hp'     => $pesanan['no_hp'] ?? '-',
-            'status'    => $pesanan['status'] ?? 'diproses',
-            'timestamp' => $pesanan['timestamp'] ?? '-',
-            'foto_ktp'  => $pesanan['foto_ktp'] ?? null,
-            'user_id'   => $pesanan['user_id'] ?? null,
+            'idDoc'     => $idDoc, // <--- ini penting
+            'nama'      => $doc['fields']['nama']['stringValue'] ?? '-',
+            'kos'       => $doc['fields']['kos']['stringValue'] ?? '-',
+            'kamar'     => $doc['fields']['kamar']['stringValue'] ?? '-',
+            'harga'     => isset($doc['fields']['harga']['integerValue']) ? (int)$doc['fields']['harga']['integerValue'] : 0,
+            'no_hp'     => $doc['fields']['no_hp']['stringValue'] ?? '-',
+            'status'    => $doc['fields']['status']['stringValue'] ?? 'diproses',
+            'timestamp' => isset($doc['fields']['timestamp']['timestampValue'])
+                ? \Carbon\Carbon::parse($doc['fields']['timestamp']['timestampValue'])->format('Y-m-d')
+                : null,
+            'foto_ktp'  => $doc['fields']['foto_ktp']['stringValue'] ?? null,
+            'user_id'   => $doc['fields']['user_id']['stringValue'] ?? null,
         ];
 
-        return view('pesanan.detail_pesanan', compact('pesanan'));
+        return view('pesanan.update_pesan_kamar', compact('pesanan'));
     }
+
+    // Method untuk update status pesanan
+    public function update(Request $request, $idDoc)
+    {
+        $request->validate([
+            'status' => 'required|in:diproses,diterima,ditolak',
+        ]);
+
+        $status = $request->input('status');
+
+        // Ambil dokumen lama
+        $oldDoc = $this->firebase->fetchDocument('pesanan', $idDoc);
+        $fields = $oldDoc['fields'] ?? [];
+
+        // Merge status baru
+        $updateData = [
+            'nama' => $fields['nama']['stringValue'] ?? '-',
+            'kos' => $fields['kos']['stringValue'] ?? '-',
+            'kamar' => $fields['kamar']['stringValue'] ?? '-',
+            'harga' => isset($fields['harga']['integerValue']) ? (int)$fields['harga']['integerValue'] : 0,
+            'no_hp' => $fields['no_hp']['stringValue'] ?? '-',
+            'timestamp' => $fields['timestamp']['timestampValue'] ?? null,
+            'status' => $status,
+            'foto_ktp' => $fields['foto_ktp']['stringValue'] ?? null,
+            'user_id' => $fields['user_id']['stringValue'] ?? null,
+        ];
+
+        try {
+            $this->firebase->updateDocument('pesanan', $idDoc, $updateData);
+            return redirect()->route('admin.pesanan.detail', $idDoc)
+                ->with('success', 'Status pesanan berhasil diperbarui.');
+        } catch (\Exception $e) {
+            return redirect()->route('admin.pesanan.detail', $idDoc)
+                ->with('error', 'Gagal memperbarui status: ' . $e->getMessage());
+        }
+    }
+
 
     // Hapus pesanan
     public function delete($idDoc)

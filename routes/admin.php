@@ -45,7 +45,8 @@ Route::middleware([AdminAuth::class])->group(function () {
 
     Route::prefix('/pesanan')->group(function () {
         Route::get('data-pesanan', [PesananController::class, 'index'])->name('admin.pesanan.index');
-        Route::get('pesanan/{idDoc}', [PesananController::class, 'detail'])->name('admin.pesanan.detail');
-        Route::delete('pesanan/{idDoc}', [PesananController::class, 'delete'])->name('admin.pesanan.delete');
+        Route::get('{idDoc}', [PesananController::class, 'detail'])->name('admin.pesanan.detail');
+        Route::put('update/{idDoc}', [PesananController::class, 'update'])->name('admin.pesanan.update');
+        Route::delete('{idDoc}', [PesananController::class, 'delete'])->name('admin.pesanan.delete');
     });
 });
