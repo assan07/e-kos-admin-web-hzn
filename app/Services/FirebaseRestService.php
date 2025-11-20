@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\File;
+use illuminate\Support\Str;
 
 class FirebaseRestService
 {
@@ -59,6 +60,20 @@ class FirebaseRestService
         return $response->json()['access_token'] ?? null;
     }
     // ====================================Rumah Kos ====================================
+    /**
+     * Generate custom ID kos berformat RK_XXX
+     * $lastNumber = angka terakhir dari ID sebelumnya
+     */
+
+    /**
+     * Generate Firestore document ID
+     */
+    public static function generateIdDoc()
+    {
+        // Bisa disesuaikan formatnya
+        return Str::upper('DOC_' . Str::random(12));
+    }
+
     /**
      * Upload file ke Firebase Storage
      */
@@ -195,6 +210,33 @@ class FirebaseRestService
         return $response->json();
     }
 
+    /**
+     * Fetch nested document (subcollection document page kamar)
+     */
+    public function fetchNestedDocument($collection1, $docId1, $collection2, $docId2)
+    {
+        $token = $this->getAccessToken();
+        if (!$token) throw new \Exception("Gagal generate access token");
+
+        $url = "{$this->baseUrl}/{$collection1}/{$docId1}/{$collection2}/{$docId2}";
+
+        $response = Http::withHeaders([
+            'Authorization' => "Bearer $token",
+            'Content-Type' => 'application/json'
+        ])->get($url);
+
+        if ($response->failed()) {
+            Log::error("FetchNestedDocument FAILED", [
+                'url' => $url,
+                'body' => $response->body()
+            ]);
+            return null;
+        }
+
+        return $response->json();
+    }
+
+
     // ==================================== Kamar ====================================
     /**
      * Upload image kamar ke Firebase Storage
@@ -241,13 +283,30 @@ class FirebaseRestService
     public function updateDocument($collection, $documentId, array $data)
     {
         try {
-            $url = "{$this->baseUrl}/projects/{$this->projectId}/databases/(default)/documents/{$collection}/{$documentId}?updateMask.fieldPaths=*";
+            $token = $this->getAccessToken();
+            if (!$token) throw new \Exception("Gagal generate access token");
+
+            // URL: gunakan baseUrl + collection relatif + documentId
+            $url = "{$this->baseUrl}/{$collection}/{$documentId}";
 
             $payload = [
                 'fields' => $this->formatFields($data)
             ];
 
-            $response = Http::patch($url, $payload);
+            Log::info("DEBUG UPDATE DOCUMENT REQUEST", [
+                'url' => $url,
+                'payload' => $payload
+            ]);
+
+            $response = Http::withHeaders([
+                'Authorization' => "Bearer $token",
+                'Content-Type' => 'application/json',
+            ])->patch($url, $payload);
+
+            Log::info("DEBUG UPDATE DOCUMENT RESPONSE", [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
 
             if ($response->failed()) {
                 throw new \Exception("Update gagal: " . $response->body());
@@ -260,11 +319,26 @@ class FirebaseRestService
         }
     }
 
+
+
     public function deleteDocument($collection, $documentId)
     {
         try {
-            $url = "{$this->baseUrl}/projects/{$this->projectId}/databases/(default)/documents/{$collection}/{$documentId}";
-            $response = Http::delete($url);
+            $token = $this->getAccessToken();
+            if (!$token) throw new \Exception("Gagal generate access token");
+
+            $url = "{$this->baseUrl}/{$collection}/{$documentId}";
+
+            $response = Http::withHeaders([
+                'Authorization' => "Bearer {$token}",
+                'Content-Type' => 'application/json'
+            ])->delete($url);
+
+            Log::info("DEBUG deleteDocument", [
+                'url' => $url,
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
 
             return $response->successful();
         } catch (\Exception $e) {
@@ -272,6 +346,7 @@ class FirebaseRestService
             return false;
         }
     }
+
 
     public function formatFields(array $data)
     {
@@ -379,4 +454,44 @@ class FirebaseRestService
             'timestampValue' => $carbon->toRfc3339String()
         ];
     }
+
+    // =================================== Mapping Kamar Fields ====================================
+    public function mapKamarFieldsToDto(string $idKamar, array $fields, ?string $alamatKos = null): object
+    {
+        // parse fasilitas
+        $fasilitasArr = [];
+        if (!empty($fields['fasilitas'])) {
+            if (isset($fields['fasilitas']['arrayValue']['values'])) {
+                foreach ($fields['fasilitas']['arrayValue']['values'] as $v) {
+                    if (isset($v['stringValue'])) $fasilitasArr[] = $v['stringValue'];
+                }
+            } else {
+                $raw = $fields['fasilitas']['stringValue'] ?? $fields['fasilitas'];
+                if (is_string($raw)) {
+                    $tmp = array_map('trim', explode(',', $raw));
+                    $fasilitasArr = array_values(array_filter($tmp, fn($x) => $x !== ''));
+                }
+            }
+        }
+
+        // helper string / int
+        $getString = fn($key) => $fields[$key]['stringValue'] ?? ($fields[$key] ?? null);
+        $getInt = fn($key) => isset($fields[$key]['integerValue']) ? (int)$fields[$key]['integerValue'] : (int) ($fields[$key]['stringValue'] ?? 0);
+
+        $dto = (object) [
+            'id_kamar'     => $idKamar,
+            'id'           => $idKamar,
+            'nama_kamar'   => $getString('nama_kamar') ?? '',
+            'alamat_kamar' => $getString('alamat') ?? $getString('alamat_kamar') ?? $alamatKos ?? '',
+            'no_kamar'     => $getString('no_kamar') ?? '',
+            'harga_sewa'   => $getInt('harga') ?? $getInt('harga_sewa'),
+            'status'       => $getString('status') ?? 'tersedia',
+            'fasilitas'    => implode(', ', $fasilitasArr),
+            'foto_url'     => $getString('foto') ?? $getString('foto_url') ?? null,
+        ];
+
+        return $dto;
+    }
 }
+
+

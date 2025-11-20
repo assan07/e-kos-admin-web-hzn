@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Session;
 use App\Services\FirebaseRestService;
 use Illuminate\Support\Str;
 
-
 class KamarController extends Controller
 {
     protected $firebase;
@@ -21,24 +20,34 @@ class KamarController extends Controller
     /**
      * LIST KAMAR
      */
-    public function index($idKos)
+    public function index($idDoc)
     {
         try {
-            $data = $this->firebase->fetchCollection("rumah_kos/$idKos/kamar");
+            // Ambil semua kamar
+            $data = $this->firebase->fetchCollection("rumah_kos/$idDoc/kamar");
+
+            // Ambil dokumen kos induk
+            $kos = $this->firebase->fetchDocument('rumah_kos', $idDoc);
+            if (!$kos) {
+                return response()->json(['error' => 'Data kos tidak ditemukan'], 404);
+            }
+
+            // Ambil alamat dari dokumen induk
+            $alamat = $kos['fields']['lokasi']['stringValue'] ?? 'Alamat tidak tersedia';
+            Log::info("DEBUG Alamat kos untuk kamar: " . $alamat);
 
             $kamarList = [];
             foreach ($data as $doc) {
                 $field = $doc['fields'] ?? [];
-
                 $kamarList[] = [
                     'id_kamar' => basename($doc['name']),
                     'nama_kamar' => $field['nama_kamar']['stringValue'] ?? '-',
-                    'alamat' => $field['alamat']['stringValue'] ?? '-',
+                    'alamat' => $alamat, // Ambil dari dokumen induk
                     'no_kamar' => $field['no_kamar']['stringValue'] ?? '-',
                     'foto' => $field['foto']['stringValue'] ?? null,
                     'harga' => (int) ($field['harga']['integerValue'] ?? 0),
-                    'fasilitas' => $field['fasilitas']['stringValue'] ?? '',
-                    'status' => $field['status']['stringValue'] ?? 'kosong',
+                    'fasilitas' => $field['fasilitas']['arrayValue']['values'] ?? [],
+                    'status' => $field['status']['stringValue'] ?? 'tersedia',
                     'jumlah_penghuni' => (int) ($field['jumlah_penghuni']['integerValue'] ?? 0),
                 ];
             }
@@ -50,20 +59,20 @@ class KamarController extends Controller
         }
     }
 
-
     /**
      * SIMPAN KAMAR BARU
      */
-    public function store(Request $req, $idKos)
+    public function store(Request $req, $idDoc)
     {
-        if (!Session::has('admin_logged_in')) {
-            return redirect()->route('login')->with('error', 'Silahkan login terlebih dahulu.');
-        }
         try {
-            // VALIDASI
+            // Ambil dokumen kos
+            $kos = $this->firebase->fetchDocument('rumah_kos', $idDoc);
+            if (!$kos) {
+                return response()->json(['error' => 'Data kos tidak ditemukan'], 404);
+            }
+
             $req->validate([
                 'nama_kamar' => 'required|string',
-                'alamat'     => 'required|string',
                 'no_kamar'   => 'required|string',
                 'harga'      => 'required|numeric',
                 'status'     => 'required|string',
@@ -71,7 +80,7 @@ class KamarController extends Controller
                 'foto'       => 'nullable|file|image|max:2048',
             ]);
 
-            // UPLOAD FOTO (jika ada)
+            // Upload foto jika ada
             $fotoUrl = '';
             if ($req->hasFile('foto')) {
                 $file = $req->file('foto');
@@ -79,153 +88,154 @@ class KamarController extends Controller
                 $fotoUrl = $this->firebase->uploadFile($file->getRealPath(), $remotePath);
             }
 
-            // PROSES FASILITAS: string -> array (trim, remove empty)
+            // Fasilitas
             $fasilitas = $req->fasilitas;
-
             if (is_string($fasilitas)) {
                 $fasilitas = array_map('trim', explode(',', $fasilitas));
             }
 
+            // Ambil alamat dari dokumen induk
+            $alamat = $kos['fields']['lokasi']['stringValue'] ?? 'Alamat tidak tersedia';
+            Log::info("DEBUG Alamat kos untuk kamar: " . $alamat);
 
-            // Build Firestore payload (fields)
+            // Build payload Firestore
             $dataFirestore = [
-                'nama_kamar' => $req->nama_kamar,
-                'alamat' => $req->alamat,
-                'no_kamar' => $req->no_kamar,
-                'harga' =>  (int)$req->harga,
-                'status' =>  $req->status,
-                'fasilitas' => $fasilitas,
-                'jumlah_penghuni' =>  0,
-                'foto' =>  $fotoUrl,
-                'created_at' => $this->firebase->fsTimestamp(now()),
-                'updated_at' => $this->firebase->fsTimestamp(now()),
-
+                'nama_kamar'      => $req->nama_kamar,
+                'alamat'          => $alamat, // optional, bisa dihapus kalau mau ambil selalu dari induk
+                'no_kamar'        => $req->no_kamar,
+                'harga'           => (int)$req->harga,
+                'status'          => $req->status,
+                'fasilitas'       => $fasilitas,
+                'jumlah_penghuni' => 0,
+                'foto'            => $fotoUrl,
+                'created_at'      => $this->firebase->fsTimestamp(now()),
+                'updated_at'      => $this->firebase->fsTimestamp(now()),
             ];
 
-
-            // Simpan dokumen ke subcollection rumah_kos/{idKos}/kamar
-            // Gunakan docId unik (atau biarkan Firestore generate dengan endpoint berbeda)
             $docId = "KMR-" . uniqid();
-            $this->firebase->createDocument("rumah_kos/{$idKos}/kamar", $dataFirestore, $docId);
+            $this->firebase->createDocument("rumah_kos/{$idDoc}/kamar", $dataFirestore, $docId);
 
-            return redirect()->route('kamar.index')->with('success', 'Kamar berhasil ditambahkan!');
+            return response()->json(['message' => 'Kamar berhasil ditambahkan'], 200);
         } catch (\Illuminate\Validation\ValidationException $ve) {
-            // kirim pesan validasi
             $messages = $ve->validator->errors()->all();
-
             Log::warning("Validasi tambah kamar gagal: " . json_encode($messages));
-            return redirect()->back()->with('error', 'Validasi gagal: ' . implode(', ', $messages))->withInput();
+            return response()->json(['error' => implode(', ', $messages)], 422);
         } catch (\Exception $e) {
-            // Log lengkap untuk debugging (pesan + trace)
-            Log::error("Tambah Kamar Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
-            // Jika error karena foreach di tempat lain, log variabel pendukung
-            return redirect()->back()->with('error', 'Gagal menambahkan kos: ' . $e->getMessage());
+            Log::error("Tambah Kamar Error: " . $e->getMessage());
+            return response()->json(['error' => 'Gagal menambahkan kamar'], 500);
         }
     }
-
 
     /**
      * DETAIL KAMAR
      */
-    public function show($idKamar)
+    public function showDetail($idDoc, $idKamar)
     {
         try {
-            $doc = $this->firebase->fetchDocumentById("kamar", $idKamar);
-
-            if (!$doc) {
-                return response()->json(['error' => 'Kamar tidak ditemukan'], 404);
+            $doc = $this->firebase->fetchNestedDocument('rumah_kos', $idDoc, 'kamar', $idKamar);
+            if (!$doc || !isset($doc['fields'])) {
+                return back()->with('error', 'Kamar tidak ditemukan.');
             }
 
-            return response()->json($doc, 200);
+            $fields = $doc['fields'];
+            $kos = $this->firebase->fetchDocument('rumah_kos', $idDoc);
+            $alamat_kos = $kos['fields']['lokasi']['stringValue'] ?? 'Alamat tidak tersedia';
+
+            // Gunakan helper mapKamarFieldsToDto
+            $kamar = $this->firebase->mapKamarFieldsToDto($idKamar, $fields, $alamat_kos);
+
+            return view('kamar_kos.show_kamar', compact('kamar', 'idDoc'));
         } catch (\Exception $e) {
-            Log::error("Detail kamar error: " . $e->getMessage());
-            return response()->json(['error' => 'Gagal mengambil detail kamar'], 500);
+            Log::error("ShowDetail kamar error: " . $e->getMessage());
+            return back()->with('error', 'Gagal mengambil detail kamar.');
         }
     }
-
 
 
     /**
      * UPDATE KAMAR
      */
-    public function update(Request $req, $idKamar)
+    public function update(Request $req, $idDoc, $idKamar)
     {
-         $fasilitas = $req->fasilitas;
-
-            if (is_string($fasilitas)) {
-                $fasilitas = array_map('trim', explode(',', $fasilitas));
-            }
         try {
-            // Validasi dasar
-            $req->validate([
-                'nama_kamar' => 'required|string',
-                'alamat' => 'required|string',
-                'no_kamar' => 'required|string',
-                'harga' => 'required|numeric',
-                'status' => 'required|string',
-                'fasilitas' => 'nullable|array',
-                'foto' => 'nullable|image|max:2048'
-            ]);
+            $doc = $this->firebase->fetchNestedDocument('rumah_kos', $idDoc, 'kamar', $idKamar);
+            if (!$doc) return back()->with('error', 'Kamar tidak ditemukan.');
 
-            // Fetch data lama
-            $oldDoc = $this->firebase->fetchDocumentById("kamar", $idKamar);
-            if (!$oldDoc) {
-                return response()->json(['error' => 'Kamar tidak ditemukan'], 404);
-            }
+            $fieldsOld = $doc['fields'] ?? [];
 
-            $fotoUrl = $oldDoc['foto'] ?? null;
+            // helper ambil value
+            $getField = function ($fields, $key) {
+                if (!isset($fields[$key])) return null;
+                $f = $fields[$key];
+                if (isset($f['stringValue'])) return $f['stringValue'];
+                if (isset($f['integerValue'])) return (int)$f['integerValue'];
+                return null;
+            };
 
-            // Jika upload foto baru
-            if ($req->hasFile('foto')) {
-                $upload = $this->firebase->uploadImage($req->file('foto'), "kamar/$idKamar");
+            $namaKamar = $req->filled('nama_kamar') ? $req->nama_kamar : $getField($fieldsOld, 'nama_kamar');
+            $noKamar   = $req->filled('no_kamar') ? $req->no_kamar : $getField($fieldsOld, 'no_kamar');
+            $harga     = $req->filled('harga_sewa') ? $req->harga_sewa : $getField($fieldsOld, 'harga');
+            $status    = $req->filled('status') ? $req->status : $getField($fieldsOld, 'status');
 
-                if (!$upload['success']) {
-                    return response()->json(['error' => 'Gagal upload foto baru'], 500);
+            // fasilitas
+            $fasilitasArr = [];
+            if ($req->filled('fasilitas')) {
+                $tmp = array_map('trim', explode(',', $req->fasilitas));
+                $fasilitasArr = array_filter($tmp, fn($x) => $x !== '');
+            } else {
+                if (isset($fieldsOld['fasilitas']['arrayValue']['values'])) {
+                    foreach ($fieldsOld['fasilitas']['arrayValue']['values'] as $v) {
+                        if (isset($v['stringValue'])) $fasilitasArr[] = $v['stringValue'];
+                    }
                 }
-
-                $fotoUrl = $upload['url'];
             }
 
-            // Format data
-            $dataFirestore = [
-                'nama_kamar' => $req->nama_kamar,
-                'alamat' => $req->alamat,
-                'no_kamar' => $req->no_kamar,
-                'harga' => (int)$req->harga,
-                'status' => $req->status,
-                'fasilitas' => $fasilitas,  // array biasa
+            // Foto
+            $fotoUrl = $getField($fieldsOld, 'foto');
+            if ($req->hasFile('foto_kamar')) {
+                $file = $req->file('foto_kamar');
+                $remotePath = 'foto_kamar/' . $idKamar . '_' . time() . '.' . $file->extension();
+                $uploaded = $this->firebase->uploadFile($file->getRealPath(), $remotePath);
+                if ($uploaded) $fotoUrl = $uploaded;
+            }
+
+            // Ambil alamat dari dokumen induk
+            $kos = $this->firebase->fetchDocument('rumah_kos', $idDoc);
+            $alamat = $kos['fields']['lokasi']['stringValue'] ?? 'Alamat tidak tersedia';
+
+            $dataUpdate = [
+                'nama_kamar' => $namaKamar,
+                'no_kamar' => $noKamar,
+                'harga' => (int)$harga,
+                'status' => $status,
+                'fasilitas' => $fasilitasArr,
                 'foto' => $fotoUrl,
-                'updated_at' => now()->toRfc3339String(), // timestamp raw
+                'updated_at' => $this->firebase->fsTimestamp(now()),
             ];
 
-            // Update Firestore
-            $res = $this->firebase->updateDocument("kamar/$idKamar", $dataFirestore);//masih errror di sini
+            $this->firebase->updateDocument("rumah_kos/{$idDoc}/kamar", $idKamar, $dataUpdate);
 
-            if (!$res['success']) {
-                return response()->json(['error' => 'Gagal update kamar: ' . $res['message']], 500);
-            }
-
-            return response()->json(['success' => true, 'message' => 'Kamar berhasil diperbarui']);
-        } catch (\Throwable $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            return back()->with('success', 'Data kamar berhasil diperbarui.');
+        } catch (\Exception $e) {
+            Log::error("Update kamar error: " . $e->getMessage());
+            return back()->with('error', 'Gagal update kamar.');
         }
     }
-
-
-
 
     /**
      * DELETE KAMAR
      */
-    public function destroy($idKamar)
+    public function destroy($idDoc, $idKamar)
     {
         try {
-            $this->firebase->deleteDocument("kamar", $idKamar);
-
-            return response()->json(['success' => true]);
+            $deleted = $this->firebase->deleteDocument("rumah_kos/{$idDoc}/kamar", $idKamar);
+            if ($deleted) {
+                return response()->json(['success' => true, 'message' => 'Kamar berhasil dihapus'], 200);
+            }
+            return response()->json(['success' => false, 'message' => 'Gagal menghapus kamar'], 500);
         } catch (\Exception $e) {
-            Log::error("Delete kamar error: " . $e->getMessage());
-            return response()->json(['error' => 'Gagal menghapus kamar'], 500);
+            Log::error("Destroy kamar error: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 }

@@ -28,10 +28,12 @@ class RumahKosController extends Controller
 
     public function store(Request $request)
     {
+        // Cek login admin
         if (!Session::has('admin_logged_in')) {
             return redirect()->route('login')->with('error', 'Silahkan login terlebih dahulu.');
         }
 
+        // Validasi input
         $request->validate([
             'nama_kos'      => 'required|string|max:255',
             'lokasi'        => 'required|string|max:255',
@@ -39,8 +41,8 @@ class RumahKosController extends Controller
             'foto'          => 'nullable|file|mimes:jpg,jpeg,png|max:2048'
         ]);
 
-
         try {
+            // Upload foto jika ada
             $fotoUrl = '';
             if ($request->hasFile('foto')) {
                 $file = $request->file('foto');
@@ -48,10 +50,11 @@ class RumahKosController extends Controller
                 $fotoUrl = $this->firebase->uploadFile($file->getRealPath(), $remotePath);
             }
 
-            $idKos = 'KOS-' . Str::upper(Str::random(6));
+            // Generate ID dokumen: RK_ + random 12 karakter
+            $idDoc = 'RK_' . Str::upper(Str::random(12));
 
+            // Siapkan data kos
             $fields = [
-                'id_kos'       => $idKos,
                 'nama_kos'     => $request->nama_kos,
                 'lokasi'       => $request->lokasi,
                 'jumlah_kamar' => (int)$request->jumlah_kamar,
@@ -60,7 +63,8 @@ class RumahKosController extends Controller
                 'updated_at'   => now()->toDateTimeString(),
             ];
 
-            $this->firebase->createDocument('rumah_kos', $fields);
+            // Simpan dokumen ke Firebase
+            $this->firebase->createDocument('rumah_kos', $fields, $idDoc);
 
             return redirect()->route('rumah-kos.create')->with('success', 'Berhasil menambahkan kos baru!');
         } catch (\Exception $e) {
@@ -70,7 +74,7 @@ class RumahKosController extends Controller
     }
 
     //detail rumah kos
-    public function detail($idKos)
+    public function detail($idDoc)
     {
         if (!Session::has('admin_logged_in')) {
             return redirect()->route('dashboard');
@@ -79,11 +83,11 @@ class RumahKosController extends Controller
         try {
             $firebase = app(FirebaseRestService::class);
 
-            $kosData = $firebase->fetchDocument('rumah_kos', $idKos);
+            $kosData = $firebase->fetchDocument('rumah_kos', $idDoc);
 
             $fields = $kosData['fields'] ?? [];
             $kos = [
-                'id_kos' => $idKos,
+                'idDoc' => $idDoc,
                 'nama_kos' => $fields['nama_kos']['stringValue'] ?? 'Kos tanpa nama',
                 'lokasi' => $fields['lokasi']['stringValue'] ?? '',
                 'jumlah_kamar' => (int)($fields['jumlah_kamar']['integerValue'] ?? 0),

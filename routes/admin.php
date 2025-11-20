@@ -13,39 +13,29 @@ Route::post('/login/process', [AuthController::class, 'login'])->name('login.pro
 Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware([AdminAuth::class])->group(function () {
+    // Sidebar AJAX
+    Route::get('/sidebar/kamar/{idDoc}', [SidebarController::class, 'fetchKamar']);
+    Route::get('/sidebar/pembayaran/{idDoc}', [SidebarController::class, 'fetchPembayaran']);
 
     Route::get('/dashboard', function () {
         return view('admin.dashboard');
     })->name('dashboard');
 
-    // Rumah Kos CRUD
     Route::prefix('/rumah-kos')->group(function () {
         Route::get('/create', [RumahKosController::class, 'create'])->name('rumah-kos.create');
         Route::post('/store', [RumahKosController::class, 'store'])->name('rumah-kos.store');
 
+        // ===== KAMAR (pindah ke atas sebelum detail rumah kos) =====
+        Route::get('/{idDoc}/kamar', [KamarController::class, 'index'])->name('kamar.index');
+        Route::post('/{idDoc}/kamar', [KamarController::class, 'store'])->name('kamar.store');
 
-        // ========== KAMAR ==========
-        // LIST kamar
-        Route::get('/{idKos}/kamar', [KamarController::class, 'index'])->name('kamar.index');
+        Route::prefix('/{idDoc}/kamar')->group(function () {
+            Route::get('{idKamar}/detail', [KamarController::class, 'showDetail'])->name('kamar.detail');
+            Route::put('{idKamar}/update', [KamarController::class, 'update'])->name('kamar.update');
+        });
 
-        // TAMBAH kamar
-        Route::post('/{idKos}/kamar', [KamarController::class, 'store'])->name('kamar.store');
-
-        // DETAIL kamar
-        Route::get('/kamar/{idKamar}', [KamarController::class, 'show'])->name('kamar.show');
-
-        // UPDATE kamar
-        Route::put('/kamar/{idKamar}', [KamarController::class, 'update'])->name('kamar.update');
-
-        // DELETE kamar
-        Route::delete('/kamar/{idKamar}', [KamarController::class, 'destroy'])->name('kamar.destroy');
-
-        // Detail rumah kos
+        // ===== Detail Rumah Kos (WAJIB DITARUH PALING BAWAH) =====
         Route::get('/{id}/detail', [RumahKosController::class, 'detail'])
             ->name('rumah-kos.detail');
     });
-
-    // Sidebar AJAX
-    Route::get('/sidebar/kamar/{idKos}', [SidebarController::class, 'fetchKamar']);
-    Route::get('/sidebar/pembayaran/{idKos}', [SidebarController::class, 'fetchPembayaran']);
 });
