@@ -28,7 +28,7 @@
                      <div class="col col-stats ms-3 ms-sm-0">
                         <div class="numbers">
                            <p class="card-category">Rumah Kos</p>
-                           <h4 class="card-title" id="statRumahKos">2</h4>
+                           <h4 class="card-title" id="statRumahKos">{{ $totalKos }}</h4>
                         </div>
                      </div>
                   </div>
@@ -47,7 +47,7 @@
                      <div class="col col-stats ms-3 ms-sm-0">
                         <div class="numbers">
                            <p class="card-category">Jumlah Kamar</p>
-                           <h4 class="card-title" id="statKamar">40</h4>
+                           <h4 class="card-title" id="statKamar">{{ $totalKamar }}</h4>
                         </div>
                      </div>
                   </div>
@@ -66,7 +66,7 @@
                      <div class="col col-stats ms-3 ms-sm-0">
                         <div class="numbers">
                            <p class="card-category">Kamar Terisi</p>
-                           <h4 class="card-title" id="statKamarTerisi">20</h4>
+                           <h4 class="card-title" id="statKamarTerisi">{{ $totalKamarTerisi }}</h4>
                         </div>
                      </div>
                   </div>
@@ -85,7 +85,7 @@
                      <div class="col col-stats ms-3 ms-sm-0">
                         <div class="numbers">
                            <p class="card-category">Penghuni</p>
-                           <h4 class="card-title" id="statPenghuni">33</h4>
+                           <h4 class="card-title" id="statPenghuni">{{ $totalPenghuni }}</h4>
                         </div>
                      </div>
                   </div>
@@ -103,34 +103,33 @@
                      <div class="card-title">Penghuni Baru</div>
                   </div>
                   <div class="card-list py-4">
-                     <div class="item-list">
-                        <div class="avatar">
-                           <img src="{{ asset('assets/img/jm_denis.jpg') }}" alt="..."
-                              class="avatar-img rounded-circle" />
-                        </div>
-                        <div class="info-user ms-3">
-                           <div class="username">Jimmy Denis</div>
-                           <div class="status">Graphic Designer</div>
-                        </div>
-                        <button class="btn btn-icon btn-link op-8 me-1">
-                           <i class="far fa-envelope"></i>
-                        </button>
-                        <button class="btn btn-icon btn-link btn-danger op-8">
-                           <i class="fas fa-ban"></i>
-                        </button>
+                     <div class="card-list py-4">
+                        @foreach (array_slice(array_reverse($penghuniBaru), 0, 5) as $user)
+                           <div class="item-list">
+                              <div class="avatar">
+                                 <img
+                                    src="{{ $user['fields']['photoUrl']['stringValue'] ?? asset('assets/img/default_avatar.png') }}"
+                                    alt="avatar" class="avatar-img rounded-circle" />
+                              </div>
+                              <div class="info-user ms-3">
+                                 <div class="username">{{ $user['fields']['nama']['stringValue'] ?? 'No Name' }}</div>
+                                 <div class="status">{{ $user['fields']['email']['stringValue'] ?? '-' }}</div>
+                              </div>
+
+                           </div>
+                        @endforeach
                      </div>
                   </div>
                </div>
             </div>
          </div>
          {{-- end New Residents --}}
-         {{-- payment history  --}}
+         {{-- Pemesanan history  --}}
          <div class="col-md-8">
             <div class="card card-round">
                <div class="card-header">
                   <div class="card-head-row card-tools-still-right">
-                     <div class="card-title">Riwayat Pembayaran</div>
-
+                     <div class="card-title">Riwayat Pemesanan</div>
                   </div>
                   <div class="card-body p-0">
                      <div class="table-responsive">
@@ -145,19 +144,27 @@
                               </tr>
                            </thead>
                            <tbody>
-                              <tr>
-                                 <th scope="row">
-                                    <button class="btn btn-icon btn-round btn-success btn-sm me-2">
-                                       <i class="fa fa-check"></i>
-                                    </button>
-                                    Payment from #10231
-                                 </th>
-                                 <td class="text-end">Mar 19, 2020, 2.45pm</td>
-                                 <td class="text-end">$250.00</td>
-                                 <td class="text-end">
-                                    <span class="badge badge-success">Completed</span>
-                                 </td>
-                              </tr>
+                              @foreach ($pesanan as $p)
+                                 <tr>
+                                    <th scope="row">
+                                       <button
+                                          class="btn btn-icon btn-round {{ $p['status'] == 'diterima' ? 'btn-success' : 'btn-warning' }} btn-sm me-2">
+                                          <i class="fa fa-check"></i>
+                                       </button>
+                                       Pesanan dari #{{ $p['id'] }} - {{ $p['nama'] }}
+                                    </th>
+                                    <td class="text-end">{{ $p['created_at'] }}</td>
+                                    <td class="text-end">Rp.{{ number_format($p['amount'], 2) }}</td>
+                                    <td class="text-end">
+                                       <span
+                                          class="badge {{ $p['status'] == 'diterima' ? 'badge-success' : 'badge-warning' }}">
+                                          {{ ucfirst($p['status']) }}
+                                       </span>
+                                    </td>
+                                 </tr>
+                              @endforeach
+
+
                            </tbody>
                         </table>
                      </div>
@@ -165,6 +172,6 @@
                </div>
             </div>
          </div>
-         {{-- end payment history  --}}
+         {{-- end pemesnaan history  --}}
       </div>
    @endsection

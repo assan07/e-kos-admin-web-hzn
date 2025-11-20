@@ -8,6 +8,7 @@ use App\Http\Controllers\SidebarController;
 use App\Http\Controllers\KamarController;
 use App\Http\Controllers\PaymentsController;
 use App\Http\Controllers\PesananController;
+use App\Http\Controllers\DashboardController;
 
 // Login
 Route::get('/', [AuthController::class, 'loginPage'])->name('login');
@@ -19,9 +20,7 @@ Route::middleware([AdminAuth::class])->group(function () {
     Route::get('/sidebar/kamar/{idDoc}', [SidebarController::class, 'fetchKamar']);
     Route::get('/sidebar/pembayaran/{idDoc}', [SidebarController::class, 'fetchPembayaran']);
 
-    Route::get('/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::prefix('/rumah-kos')->group(function () {
         Route::get('/create', [RumahKosController::class, 'create'])->name('rumah-kos.create');
