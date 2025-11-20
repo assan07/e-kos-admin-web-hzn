@@ -29,7 +29,7 @@
 
             <!-- Rumah Kos -->
             <li class="nav-item">
-               <a href="#rumahKosMenu" aria-expanded="false">
+               <a href="{{ route('rumah_kos.index') }}" aria-expanded="false">
                   <i class="fas fa-home"></i>
                   <p>Rumah Kos</p>
                </a>
