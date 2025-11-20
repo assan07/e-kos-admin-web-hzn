@@ -158,7 +158,7 @@
          </div>
       </div>
 
-      <!-- Modal Tambah Kamar -->
+     
       <!-- Modal Tambah Kamar -->
       <div class="modal fade" id="modalTambahKamar" tabindex="-1" aria-labelledby="modalTambahKamarLabel"
          aria-hidden="true">
@@ -222,21 +222,46 @@
       $(document).ready(function() {
          let idDoc = '{{ $kos['idDoc'] }}';
 
-         function showAlert(message, type = 'success') {
-            $("#alertBox").html(`
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `);
+         function loadTabelKamar() {
+            $.getJSON('/admin/rumah-kos/' + idDoc + '/kamar', function(data) {
+               let tbody = '';
+               let totalPenghuni = 0;
+               let kamarTerisi = 0;
+
+               data.forEach(k => {
+                  let penghuni = k.jumlah_penghuni || 0;
+                  totalPenghuni += penghuni;
+                  if (penghuni > 0) kamarTerisi++;
+
+                  tbody += `<tr>
+                    <td><span class="badge bg-light text-dark">${k.id_kamar}</span></td>
+                    <td><strong>${k.nama_kamar}</strong></td>
+                    <td>${penghuni>0 ? `<span class="badge bg-success">${penghuni} Orang</span>` : `<span class="badge bg-secondary">Kosong</span>`}</td>
+                    <td class="text-center">
+                        <a href="/admin/rumah-kos/${idDoc}/kamar/${k.id_kamar}/detail" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i> Detail</a>
+                        <button class="btn btn-sm btn-outline-danger btn-hapus-kamar" 
+                                data-id-kamar="${k.id_kamar}" 
+                                data-id-doc="${idDoc}">
+                            <i class="fas fa-trash"></i> Hapus
+                        </button>
+                    </td>
+                </tr>`;
+               });
+
+               $('#tabelKamar tbody').html(tbody);
+               $('#totalPenghuni').text(totalPenghuni);
+               $('#kamarTerisi').text(kamarTerisi);
+            });
          }
+
+         loadTabelKamar();
 
          // Tambah kamar
          $('#btnSimpanKamar').click(function() {
             let form = $('#formTambahKamar')[0];
             let fd = new FormData(form);
+
             fd.append('idDoc', idDoc);
-            fd.append('alamat', $("input[name='alamat']").val());
 
             let $btn = $(this);
             $btn.prop('disabled', true).html(
@@ -249,17 +274,16 @@
                processData: false,
                contentType: false,
                success: function(res) {
-                  showAlert("Kamar berhasil ditambah", "success");
+                  Swal.fire('Berhasil', res.message, 'success');
                   $('#modalTambahKamar').modal('hide');
-                  location.reload();
+                  loadTabelKamar();
                },
                error: function(xhr) {
-                  let msg = 'Terjadi kesalahan';
-                  if (xhr.responseJSON && xhr.responseJSON.error) msg = xhr.responseJSON.error;
-                  showAlert(msg, "danger");
+                  let msg = xhr.responseJSON?.message || 'Terjadi kesalahan';
+                  Swal.fire('Gagal', msg, 'error');
                },
                complete: function() {
-                  $btn.prop('disabled', false).html('<i class="fas fa-save me-1"></i>Simpan');
+                  $btn.prop('disabled', false).html('<i class="fas fa-save me-1"></i> Simpan');
                }
             });
          });
@@ -267,84 +291,45 @@
          // Hapus kamar
          $('#tabelKamar').on('click', '.btn-hapus-kamar', function() {
             let idKamar = $(this).data('id-kamar');
-            if (!confirm('Yakin ingin menghapus kamar ini?')) return;
+            let idDoc = $(this).data('id-doc');
 
-            $.ajax({
-               url: '/admin/rumah-kos/' + idDoc + '/kamar/' + idKamar,
-               method: 'POST',
-               data: {
-                  _method: 'DELETE',
-                  _token: '{{ csrf_token() }}'
-               },
-               success: function(res) {
-                  alert(res.message || 'Kamar berhasil dihapus');
-                  location.reload();
-               },
-               error: function(xhr) {
-                  console.error(xhr.responseJSON || xhr.responseText);
-                  alert('Gagal menghapus kamar, cek console untuk detail');
+            Swal.fire({
+               title: 'Yakin?',
+               text: "Kamar ini akan dihapus secara permanen!",
+               icon: 'warning',
+               showCancelButton: true,
+               confirmButtonColor: '#3085d6',
+               cancelButtonColor: '#d33',
+               confirmButtonText: 'Ya, hapus!',
+               cancelButtonText: 'Batal'
+            }).then((result) => {
+               if (result.isConfirmed) {
+                  $.ajax({
+                     url: '/admin/rumah-kos/' + idDoc + '/kamar/' + idKamar,
+                     method: 'POST',
+                     data: {
+                        _method: 'DELETE',
+                        _token: '{{ csrf_token() }}'
+                     },
+                     success: function(res) {
+                        Swal.fire({
+                           icon: res.success ? 'success' : 'error',
+                           title: res.success ? 'Berhasil' : 'Gagal',
+                           text: res.message,
+                           timer: 1500,
+                           showConfirmButton: false
+                        }).then(() => {
+                           if (res.success) loadTabelKamar();
+                        });
+                     },
+                     error: function(xhr) {
+                        console.error(xhr.responseJSON || xhr.responseText);
+                        Swal.fire('Gagal', 'Kamar gagal dihapus. Cek console untuk detail.',
+                           'error');
+                     }
+                  });
                }
             });
-         });
-
-         // Load tabel kamar
-         $.getJSON('/admin/rumah-kos/' + idDoc + '/kamar', function(data) {
-            let tbody = '';
-            let totalPenghuni = 0;
-            let kamarTerisi = 0;
-
-            data.forEach(k => {
-               let penghuni = k.jumlah_penghuni || 0;
-               totalPenghuni += penghuni;
-               if (penghuni > 0) kamarTerisi++;
-
-               tbody += `<tr>
-                <td><span class="badge bg-light text-dark">${k.id_kamar}</span></td>
-                <td><strong>${k.nama_kamar}</strong></td>
-                <td>${penghuni>0?`<span class="badge bg-success">${penghuni} Orang</span>`:`<span class="badge bg-secondary">Kosong</span>`}</td>
-                <td class="text-center">
-                    <a href="/admin/rumah-kos/${idDoc}/kamar/${k.id_kamar}/detail" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i> Detail</a>
-                    <button class="btn btn-sm btn-outline-danger btn-hapus-kamar" data-id-kamar="${k.id_kamar}"><i class="fas fa-trash"></i> Hapus</button>
-                </td>
-            </tr>`;
-            });
-
-            $('#tabelKamar tbody').html(tbody);
-            $('#totalPenghuni').text(totalPenghuni);
-            $('#kamarTerisi').text(kamarTerisi);
-         });
-
-         // Load pembayaran
-         $.getJSON('/admin/rumah-kos/' + idDoc + '/pembayaran', function(data) {
-            let tbody = '';
-            let totalAmount = 0;
-
-            data.forEach(p => {
-               totalAmount += parseFloat(p.amount) || 0;
-
-               let statusBadge = '';
-               switch (p.status.toLowerCase()) {
-                  case 'lunas':
-                  case 'paid':
-                     statusBadge = `<span class="badge bg-success">${p.status}</span>`;
-                     break;
-                  case 'pending':
-                     statusBadge = `<span class="badge bg-warning text-dark">${p.status}</span>`;
-                     break;
-                  default:
-                     statusBadge = `<span class="badge bg-danger">${p.status}</span>`;
-               }
-
-               tbody += `<tr>
-                <td><span class="badge bg-light text-dark">${p.id}</span></td>
-                <td><strong>Rp ${parseInt(p.amount).toLocaleString('id-ID')}</strong></td>
-                <td>${statusBadge}</td>
-                <td class="text-center"><a href="#" class="btn btn-sm btn-outline-success"><i class="fas fa-file-invoice"></i> Lihat</a></td>
-            </tr>`;
-            });
-
-            $('#tabelPembayaran tbody').html(tbody);
-            $('#totalPembayaran').text('Rp ' + totalAmount.toLocaleString('id-ID'));
          });
       });
    </script>
