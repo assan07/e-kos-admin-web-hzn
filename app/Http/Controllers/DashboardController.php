@@ -17,7 +17,6 @@ class DashboardController extends Controller
         Log::info("Total Rumah Kos: {$totalKos}");
 
         $totalKamar = 0;
-        $totalKamarTerisi = 0;
 
         foreach ($kosDocuments as $kosDoc) {
             $kosId = basename($kosDoc['name']);
@@ -25,20 +24,30 @@ class DashboardController extends Controller
             $jumlahKamar = count($kamarDocuments);
             $totalKamar += $jumlahKamar;
             Log::info("Kos {$kosId} memiliki {$jumlahKamar} kamar");
-
-            $terisi = 0;
-            foreach ($kamarDocuments as $kamar) {
-                if (($kamar['fields']['status']['stringValue'] ?? '') === 'terisi') {
-                    $totalKamarTerisi++;
-                    $terisi++;
-                }
-            }
-            Log::info("Kos {$kosId} memiliki {$terisi} kamar terisi");
         }
 
+        // 2. Fetch Kamar Terisi
+        $totalKamarTerisi = 0;
+        $pesananDocuments = $firebase->fetchCollection('pesanan');
+
+        foreach ($pesananDocuments as $doc) {
+            $status = $doc['fields']['status']['stringValue'] ?? '';
+            if ($status === 'diterima') {
+                $totalKamarTerisi++;
+            }
+        }
+
+        Log::info("Total Kamar Terisi: {$totalKamarTerisi}");
+
         // 2. Fetch Penghuni
-        $penghuniDocuments = $firebase->fetchCollection('users');
-        $totalPenghuni = count($penghuniDocuments);
+        $penghuniDocuments = $firebase->fetchCollection('pesanan');
+        $totalPenghuni = 0;
+        foreach ($penghuniDocuments as $doc) {
+            $status = $doc['fields']['status']['stringValue'] ?? '';
+            if ($status === 'diterima') {
+                $totalPenghuni++;
+            }
+        }
         Log::info("Total Penghuni: {$totalPenghuni}");
         $penghuniBaru = $penghuniDocuments; // ambil semua, bisa slice nanti
 

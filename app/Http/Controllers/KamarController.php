@@ -37,7 +37,33 @@ class KamarController extends Controller
             Log::info("DEBUG Alamat kos untuk kamar: " . $alamat);
 
             $kamarList = [];
+            $totalKamar = count($data);
+            $totalPenghuni = 0;
+            // 2. Fetch Kamar Terisi
+            $totalKamarTerisi = 0;
+            $pesananDocuments = $this->firebase->fetchCollection('pesanan');
+
+            // 1. Fetch Total Penghuni
+            foreach ($pesananDocuments as $doc) {
+                $status = $doc['fields']['status']['stringValue'] ?? '';
+                if ($status === 'diterima') {
+                    $totalKamarTerisi++;
+                }
+            }
+
+            // 2. Fetch Penghuni
+            $penghuniDocuments = $this->firebase->fetchCollection('pesanan');
+            $totalPenghuni = 0;
+            foreach ($penghuniDocuments as $doc) {
+                $status = $doc['fields']['status']['stringValue'] ?? '';
+                if ($status === 'diterima') {
+                    $totalPenghuni++;
+                }
+            }
+            Log::info("Total Penghuni: {$totalPenghuni}");
+            // 3. Map Kamar
             foreach ($data as $doc) {
+                Log::info("Mapping kamar: " . json_encode($doc));
                 $field = $doc['fields'] ?? [];
                 $kamarList[] = [
                     'id_kamar' => basename($doc['name']),
@@ -48,11 +74,15 @@ class KamarController extends Controller
                     'harga' => (int) ($field['harga']['integerValue'] ?? 0),
                     'fasilitas' => $field['fasilitas']['arrayValue']['values'] ?? [],
                     'status' => $field['status']['stringValue'] ?? 'tersedia',
-                    'jumlah_penghuni' => (int) ($field['jumlah_penghuni']['integerValue'] ?? 0),
                 ];
             }
 
-            return response()->json($kamarList, 200);
+            return response()->json([
+                'kamarList' => $kamarList,
+                'totalKamar' => $totalKamar,
+                'kamarTerisi' => $totalKamarTerisi,
+                'totalPenghuni' => $totalPenghuni,
+            ], 200);
         } catch (\Exception $e) {
             Log::error("Fetch kamar error: " . $e->getMessage());
             return response()->json(['error' => 'Gagal mengambil kamar'], 500);
@@ -60,10 +90,6 @@ class KamarController extends Controller
     }
 
 
-    
-    /**
-     * SIMPAN KAMAR BARU
-     */
     public function store(Request $req, $idDoc)
     {
         try {
@@ -73,6 +99,20 @@ class KamarController extends Controller
                 return response()->json(['error' => 'Data kos tidak ditemukan'], 404);
             }
 
+            $maxKamar = (int)($kos['fields']['jumlah_kamar']['integerValue'] ?? 0);
+
+            // Ambil jumlah kamar saat ini
+            $kamarSaatIni = $this->firebase->fetchCollection("rumah_kos/{$idDoc}/kamar");
+            $jumlahKamarSekarang = count($kamarSaatIni);
+
+            // Validasi jumlah kamar
+            if ($jumlahKamarSekarang >= $maxKamar) {
+                return response()->json([
+                    'error' => "Jumlah kamar sudah mencapai batas maksimum ({$maxKamar})"
+                ], 422);
+            }
+
+            // Validasi form input
             $req->validate([
                 'nama_kamar' => 'required|string',
                 'no_kamar'   => 'required|string',
@@ -98,12 +138,11 @@ class KamarController extends Controller
 
             // Ambil alamat dari dokumen induk
             $alamat = $kos['fields']['lokasi']['stringValue'] ?? 'Alamat tidak tersedia';
-            Log::info("DEBUG Alamat kos untuk kamar: " . $alamat);
 
             // Build payload Firestore
             $dataFirestore = [
                 'nama_kamar'      => $req->nama_kamar,
-                'alamat'          => $alamat, // optional, bisa dihapus kalau mau ambil selalu dari induk
+                'alamat'          => $alamat,
                 'no_kamar'        => $req->no_kamar,
                 'harga'           => (int)$req->harga,
                 'status'          => $req->status,
@@ -120,11 +159,9 @@ class KamarController extends Controller
             return response()->json(['message' => 'Kamar berhasil ditambahkan'], 200);
         } catch (\Illuminate\Validation\ValidationException $ve) {
             $messages = $ve->validator->errors()->all();
-            Log::warning("Validasi tambah kamar gagal: " . json_encode($messages));
             return response()->json(['error' => implode(', ', $messages)], 422);
         } catch (\Exception $e) {
-            Log::error("Tambah Kamar Error: " . $e->getMessage());
-            return response()->json(['error' => 'Gagal menambahkan kamar'], 500);
+            return response()->json(['error' => 'Gagal menambahkan kamar: ' . $e->getMessage()], 500);
         }
     }
 

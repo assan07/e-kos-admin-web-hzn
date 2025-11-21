@@ -20,61 +20,66 @@
    <div class="sidebar-wrapper scrollbar scrollbar-inner">
       <div class="sidebar-content">
          <ul class="nav nav-secondary">
-            <li class="nav-item active">
+            {{-- Dashboard --}}
+            <li class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                <a href="{{ route('dashboard') }}">
                   <i class="fa fa-dashboard" aria-hidden="true"></i>
                   <p>Dashboard</p>
                </a>
             </li>
 
-            <!-- Rumah Kos -->
-            <li class="nav-item">
-               <a href="{{ route('rumah_kos.index') }}" aria-expanded="false">
+            {{-- Rumah Kos --}}
+            <li class="nav-item {{ request()->routeIs('rumah_kos.*') ? 'active' : '' }}">
+               <a href="{{ route('rumah_kos.index') }}">
                   <i class="fas fa-home"></i>
                   <p>Rumah Kos</p>
                </a>
             </li>
-            <!-- Kamar Kos -->
-            <li class="nav-item">
-               <a data-bs-toggle="collapse" href="#rumahKosMenu" aria-expanded="false">
+
+            {{-- Kamar Kos --}}
+            @php
+               $isKamarActive = request()->routeIs('kamar.*') || request()->routeIs('rumah-kos.detail');
+            @endphp
+            <li class="nav-item {{ $isKamarActive ? 'active' : '' }}">
+               <a data-bs-toggle="collapse" href="#rumahKosMenu"
+                  aria-expanded="{{ $isKamarActive ? 'true' : 'false' }}">
                   <i class="fas fa-bed"></i>
                   <p>Kamar Kos</p>
                   <span class="caret"></span>
                </a>
-               <div class="collapse" id="rumahKosMenu">
+               <div class="collapse {{ $isKamarActive ? 'show' : '' }}" id="rumahKosMenu">
                   <ul class="nav nav-collapse">
                      @foreach ($kosList as $kos)
-                        <li>
+                        <li
+                           class="{{ request()->url() === route('rumah-kos.detail', $kos['id_kos']) ? 'active' : '' }}">
                            <a href="{{ route('rumah-kos.detail', $kos['id_kos']) }}">
                               <span class="sub-item">{{ $kos['nama_kos'] }}</span>
                            </a>
                         </li>
                      @endforeach
-
                   </ul>
                </div>
             </li>
 
-            {{-- Pesanana --}}
-            <li class="nav-item">
-               <a href="{{ route('admin.pesanan.index') }}" aria-expanded="false">
+            {{-- Pesanan --}}
+            <li class="nav-item {{ request()->routeIs('admin.pesanan.*') ? 'active' : '' }}">
+               <a href="{{ route('admin.pesanan.index') }}">
                   <i class="fas fa-envelope"></i>
                   <p>Pesanan</p>
                </a>
-
             </li>
 
-            <!-- Pembayaran -->
-            <li class="nav-item">
-               <a href="{{ route('admin.pembayaran.index') }}" aria-expanded="false">
+            {{-- Pembayaran --}}
+            <li class="nav-item {{ request()->routeIs('admin.pembayaran.*') ? 'active' : '' }}">
+               <a href="{{ route('admin.pembayaran.index') }}">
                   <i class="fas fa-money-check"></i>
                   <p>Pembayaran</p>
                </a>
-
             </li>
          </ul>
       </div>
    </div>
+
 </div>
 @push('script')
    <script>

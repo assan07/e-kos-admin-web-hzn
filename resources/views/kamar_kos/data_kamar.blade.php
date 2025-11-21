@@ -25,10 +25,10 @@
                   <div class="d-flex justify-content-between align-items-start">
                      <div>
                         <p class="text-muted mb-1 small">Total Kamar</p>
-                        <h3 class="mb-0 fw-bold" id="totalKamar">{{ $kos['jumlah_kamar'] }}</h3>
+                        <h3 class="mb-0 fw-bold" id="totalKamar"></h3>
                      </div>
                      <div class="bg-primary bg-opacity-10 p-3 rounded">
-                        <i class="fas fa-door-open text-primary fs-4"></i>
+                        <i class="fas fa-door-open text-white fs-4"></i>
                      </div>
                   </div>
                </div>
@@ -45,7 +45,7 @@
                         <h3 class="mb-0 fw-bold" id="kamarTerisi">0</h3>
                      </div>
                      <div class="bg-success bg-opacity-10 p-3 rounded">
-                        <i class="fas fa-home text-success fs-4"></i>
+                        <i class="fas fa-circle-notch text-white fs-4"></i>
                      </div>
                   </div>
                </div>
@@ -62,24 +62,7 @@
                         <h3 class="mb-0 fw-bold" id="totalPenghuni">0</h3>
                      </div>
                      <div class="bg-info bg-opacity-10 p-3 rounded">
-                        <i class="fas fa-users text-info fs-4"></i>
-                     </div>
-                  </div>
-               </div>
-            </div>
-         </div>
-
-         <!-- Total Pembayaran -->
-         <div class="col-md-3 col-sm-6">
-            <div class="card border-0 shadow-sm h-100">
-               <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-start">
-                     <div>
-                        <p class="text-muted mb-1 small">Total Pembayaran</p>
-                        <h3 class="mb-0 fw-bold" id="totalPembayaran">Rp 0</h3>
-                     </div>
-                     <div class="bg-warning bg-opacity-10 p-3 rounded">
-                        <i class="fas fa-wallet text-warning fs-4"></i>
+                        <i class="fas fa-users text-white fs-4"></i>
                      </div>
                   </div>
                </div>
@@ -106,7 +89,7 @@
                      <tr>
                         <th>ID Kamar</th>
                         <th>Nama Kamar</th>
-                        <th>Jumlah Penghuni</th>
+                        <th>Status Kamar</th>
                         <th class="text-center">Aksi</th>
                      </tr>
                   </thead>
@@ -189,42 +172,41 @@
          let idDoc = '{{ $kos['idDoc'] }}';
 
          function loadTabelKamar() {
-            $.getJSON('/admin/rumah-kos/' + idDoc + '/kamar', function(data) {
+            $.getJSON('/admin/rumah-kos/' + idDoc + '/kamar', function(res) {
+               let data = res.kamarList || [];
                let tbody = '';
-               let totalPenghuni = 0;
-               let kamarTerisi = 0;
+
+               // Update statistik langsung dari controller
+               $('#totalKamar').text(res.totalKamar);
+               $('#kamarTerisi').text(res.kamarTerisi);
+               $('#totalPenghuni').text(res.totalPenghuni);
 
                data.forEach(k => {
-                  let penghuni = k.jumlah_penghuni || 0;
-                  totalPenghuni += penghuni;
-                  if (penghuni > 0) kamarTerisi++;
 
                   tbody += `<tr>
-                        <td><span class="badge bg-light text-dark">${k.id_kamar}</span></td>
-                        <td><strong>${k.nama_kamar}</strong></td>
-                        <td>${penghuni>0 ? `<span class="badge bg-success">${penghuni} Orang</span>` : `<span class="badge bg-secondary">Kosong</span>`}</td>
-                        <td class="text-center">
-                           <a href="/admin/rumah-kos/${idDoc}/kamar/${k.id_kamar}/detail"
-                              class="btn btn-sm btn-outline-primary">
-                              <i class="fas fa-eye"></i> Detail
-                           </a>
-                           <button class="btn btn-sm btn-danger btn-hapus-kamar"
-                                    data-id-kamar="${k.id_kamar}"
-                                    data-id-doc="${idDoc}">
-                              <i class="fas fa-trash"></i> Hapus
-                           </button>
-                        </td>
-                     </tr>`;
+                    <td><span class="badge bg-light text-dark">${k.id_kamar}</span></td>
+                    <td><strong>${k.nama_kamar}</strong></td>
+                    <td><strong>${k.status}</strong></td>
+                    <td class="text-center">
+                        <a href="/admin/rumah-kos/${idDoc}/kamar/${k.id_kamar}/detail"
+                            class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i> Detail
+                        </a>
+                        <button class="btn btn-sm btn-danger btn-hapus-kamar"
+                                data-id-kamar="${k.id_kamar}"
+                                data-id-doc="${idDoc}">
+                            <i class="fas fa-trash"></i> Hapus
+                        </button>
+                    </td>
+                </tr>`;
                });
 
-
                $('#tabelKamar tbody').html(tbody);
-               $('#totalPenghuni').text(totalPenghuni);
-               $('#kamarTerisi').text(kamarTerisi);
             });
          }
 
          loadTabelKamar();
+
 
          // Tambah kamar
          $('#btnSimpanKamar').click(function() {
@@ -245,11 +227,12 @@
                contentType: false,
                success: function(res) {
                   Swal.fire('Berhasil', res.message, 'success');
-                  $('#modalTambahKamar').modal('hide');
+                  $('#modalTambahKamar').modal('hide');s
                   loadTabelKamar();
                },
                error: function(xhr) {
-                  let msg = xhr.responseJSON?.message || 'Terjadi kesalahan';
+                  let msg = xhr.responseJSON?.message ||
+                     'Terjadi kesalahan saat menyimpan kamar.(Batas Kamar Terlampaui?)';
                   Swal.fire('Gagal', msg, 'error');
                },
                complete: function() {
