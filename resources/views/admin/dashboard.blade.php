@@ -106,13 +106,15 @@
                         @foreach (array_slice(array_reverse($penghuniBaru), 0, 5) as $user)
                            <div class="item-list">
                               <div class="avatar">
-                                 <img
-                                    src="{{ $user['fields']['photoUrl']['stringValue'] ?? asset('assets/img/default_avatar.png') }}"
-                                    alt="avatar" class="avatar-img rounded-circle" />
+                                 <img src="{{ $user['user_photo'] ?? asset('assets/img/e-kos2.png') }}" alt="avatar"
+                                    class="avatar-img rounded-circle" />
                               </div>
                               <div class="info-user ms-3">
-                                 <div class="username">{{ $user['fields']['nama']['stringValue'] ?? 'No Name' }}</div>
-                                 <div class="status">{{ $user['fields']['email']['stringValue'] ?? '-' }}</div>
+                                 <div class="username"><i
+                                       class="fas fa-user"></i> : {{ $user['fields']['nama']['stringValue'] ?? 'No Name' }}
+                                 </div>
+                                 <div class="no-hp"><i
+                                       class="fas fa-phone"></i> : {{ $user['fields']['no_hp']['stringValue'] ?? '-' }}</div>
                               </div>
 
                            </div>

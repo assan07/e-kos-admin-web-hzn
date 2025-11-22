@@ -14,7 +14,7 @@ class DashboardController extends Controller
         // 1. Fetch Rumah Kos
         $kosDocuments = $firebase->fetchCollection('rumah_kos');
         $totalKos = count($kosDocuments);
-        Log::info("Total Rumah Kos: {$totalKos}");
+        // Log::info("Total Rumah Kos: {$totalKos}");
 
         $totalKamar = 0;
 
@@ -23,7 +23,7 @@ class DashboardController extends Controller
             $kamarDocuments = $firebase->fetchCollection("rumah_kos/$kosId/kamar");
             $jumlahKamar = count($kamarDocuments);
             $totalKamar += $jumlahKamar;
-            Log::info("Kos {$kosId} memiliki {$jumlahKamar} kamar");
+            // Log::info("Kos {$kosId} memiliki {$jumlahKamar} kamar");
         }
 
         // 2. Fetch Kamar Terisi
@@ -37,9 +37,9 @@ class DashboardController extends Controller
             }
         }
 
-        Log::info("Total Kamar Terisi: {$totalKamarTerisi}");
+        // Log::info("Total Kamar Terisi: {$totalKamarTerisi}");
 
-        // 2. Fetch Penghuni
+        // 3. Fetch Penghuni
         $penghuniDocuments = $firebase->fetchCollection('pesanan');
         $totalPenghuni = 0;
         foreach ($penghuniDocuments as $doc) {
@@ -48,16 +48,17 @@ class DashboardController extends Controller
                 $totalPenghuni++;
             }
         }
-        Log::info("Total Penghuni: {$totalPenghuni}");
+        // Log::info("Total Penghuni: {$totalPenghuni}");
         $penghuniBaru = $penghuniDocuments; // ambil semua, bisa slice nanti
 
-        // 3. Fetch Payments
+        // 4. Fetch Payments
         $pesananDocuments = $firebase->fetchCollection('pesanan');
         $pesanan = array_map(function ($doc) {
             return [
                 'id' => basename($doc['name']),
                 'amount' => $doc['fields']['harga']['integerValue'] ?? 0,
-                'status' => $doc['fields']['status']['stringValue'] ?? 'Pending',
+                'status' => $doc['fields']['status']['stringValue'] ?? 'diproses',
+                'no_hp' => $doc['fields']['no_hp']['stringValue'] ?? '-',
                 'created_at' => \Carbon\Carbon::parse($doc['fields']['timestamp']['stringValue'] ?? now())
                     ->format('M d, Y, h:ia'),
                 'nama' => $doc['fields']['nama']['stringValue'] ?? 'No Name',
@@ -68,8 +69,15 @@ class DashboardController extends Controller
 
         Log::info("Payments fetched: " . count($pesanan));
 
-        // 4. Optional: langsung dump kalau mau lihat di browser
-        // dd($totalKos, $totalKamar, $totalKamarTerisi, $totalPenghuni, $penghuniBaru, $payments);
+        //5. fatch foto user
+        foreach ($penghuniBaru as &$doc) {
+            $uid = $doc['fields']['user_id']['stringValue'] ?? null;
+            if ($uid) {
+                $userDoc = $firebase->fetchDocument('users', $uid);
+                $doc['user_photo'] = $userDoc['fields']['photoUrl']['stringValue'] ?? null;
+                            }
+            Log::info("User ID: {$uid}, Photo URL: " . ($doc['user_photo'] ?? 'No Photo'));
+        }
 
         return view('admin.dashboard', compact(
             'totalKos',
@@ -77,7 +85,8 @@ class DashboardController extends Controller
             'totalKamarTerisi',
             'totalPenghuni',
             'penghuniBaru',
-            'pesanan'
+            'pesanan',
+
         ));
     }
 }
