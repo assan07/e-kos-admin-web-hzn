@@ -9,6 +9,10 @@ use App\Services\FirestoreService;
 
 class AuthController extends Controller
 {
+    public function loginForm()
+    {
+        return view('auth.login-page');
+    }
     public function login(Request $request)
     {
         $request->validate([
@@ -38,6 +42,7 @@ class AuthController extends Controller
                     'nama' => $fields['nama']['stringValue'],
                     'email' => $email
                 ]);
+
 
                 return redirect()->route('dashboard');
             }

@@ -11,7 +11,7 @@ use App\Http\Controllers\PesananController;
 use App\Http\Controllers\DashboardController;
 
 // Login
-Route::get('/', [AuthController::class, 'loginPage'])->name('login');
+Route::get('/', [AuthController::class, 'loginForm'])->name('login');
 Route::post('/login/process', [AuthController::class, 'login'])->name('login.process');
 Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 
