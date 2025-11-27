@@ -43,9 +43,7 @@ class PesananController extends Controller
                     : 0,
                 'no_hp'     => $fields['no_hp']['stringValue'] ?? '-',
                 'status'    => $fields['status']['stringValue'] ?? 'diproses',
-                'timestamp' => isset($fields['timestamp']['timestampValue'])
-                    ? \Carbon\Carbon::parse($fields['timestamp']['timestampValue'])->format('Y-m-d')
-                    : '-',
+                'timestamp' => isset($fields['timestamp']['timestampValue']),
                 'foto_ktp'  => $fields['foto_ktp']['stringValue'] ?? null,
                 'user_id'   => $fields['user_id']['stringValue'] ?? null,
             ];
@@ -55,6 +53,7 @@ class PesananController extends Controller
         $totalPesanan = count($pesanan);
 
         $totalDiproses = count(array_filter($pesanan, fn($p) => $p['status'] === 'diproses'));
+
         $totalDiterima = count(array_filter($pesanan, fn($p) => $p['status'] === 'diterima'));
         $totalDitolak  = count(array_filter($pesanan, fn($p) => $p['status'] === 'ditolak'));
 
