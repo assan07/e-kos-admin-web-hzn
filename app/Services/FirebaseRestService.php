@@ -206,6 +206,11 @@ class FirebaseRestService
 
         if ($response->failed()) {
             throw new \Exception("Dokumen {$docId} di collection {$collection} tidak ditemukan: " . $response->body());
+            log::error("FetchDocument FAILED", [
+                'url' => $url,
+                'body' => $response->body(), 
+                "Dokumen {$docId} di collection {$collection} tidak ditemukan: "
+            ]);
         }
 
         return $response->json();

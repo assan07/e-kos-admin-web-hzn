@@ -18,12 +18,17 @@ class PesananController extends Controller
 
     public function index()
     {
-        $pesananCollection = $this->firebase->fetchCollection('pesanan');
+        try {
+            $collection = $this->firebase->fetchCollection('pesanan');
+            if (!is_array($collection)) $collection = [];
+        } catch (\Exception $e) {
+            $collection = [];
+        }
+        $pesanan = [];
 
+        Log::info('Pesanan Collection:', $collection);
 
-        Log::info('Pesanan Collection:', $pesananCollection);
-
-        foreach ($pesananCollection as $doc) {
+        foreach ($collection as $doc) {
             // idDoc di Firestore ada di akhir path 'name'
             $pathParts = explode('/', $doc['name']);
             $idDoc = end($pathParts);

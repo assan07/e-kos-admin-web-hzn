@@ -8,7 +8,7 @@
          <div>
             <h2 class="fw-bold mb-1">
                <i class="fas fa-receipt text-primary me-2"></i>
-               Riwayat Pembayaran
+               Riwayat Pembayarand
             </h2>
             <p class="text-muted mb-0">Kelola dan pantau pembayaran kos Anda</p>
          </div>
@@ -30,7 +30,7 @@
                <div class="card-body">
                   <div class="d-flex align-items-center">
                      <div class="icon-box bg-primary bg-opacity-10 text-primary rounded-3 p-3 me-3">
-                        <i class="fas fa-home fa-2x"></i>
+                        <i class="fas fa-home fa-2x text-white"></i>
                      </div>
                      <div>
                         <p class="text-muted mb-1 small">Kos & Kamar</p>
@@ -47,7 +47,7 @@
                <div class="card-body">
                   <div class="d-flex align-items-center">
                      <div class="icon-box bg-success bg-opacity-10 text-success rounded-3 p-3 me-3">
-                        <i class="fas fa-check-circle fa-2x"></i>
+                        <i class="fas fa-check-circle fa-2x text-white"></i>
                      </div>
                      <div>
                         <p class="text-muted mb-1 small">Status Pembayaran</p>
@@ -152,7 +152,13 @@
                         </tr>
                      @empty
                         <tr>
-                           <td colspan="8" class="text-center py-5">Belum ada data pembayaran</td>
+                           <td colspan="7" class="text-center py-5">
+                              <div class="d-flex flex-column align-items-center">
+                                 <i class="fas fa-inbox fa-5x text-muted mb-3"></i>
+                                 <h5 class="text-muted">Tidak ada data pembayaran !</h5>
+                                 <p class="text-muted small">Pembayaran akan muncul di sini setelah ada yang membayar</p>
+                              </div>
+                           </td>
                         </tr>
                      @endforelse
                   </tbody>
