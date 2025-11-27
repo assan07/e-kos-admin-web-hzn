@@ -1,4 +1,6 @@
 @extends('layouts.app')
+@section('title', 'Data-Kamar | Update Kamar')
+
 
 @section('content')
    <div class="container mt-4">

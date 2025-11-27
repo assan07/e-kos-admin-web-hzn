@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('title', 'Dahsboard')
 
 @section('content')
    <div class="page-inner">
@@ -110,11 +111,11 @@
                                     class="avatar-img rounded-circle" />
                               </div>
                               <div class="info-user ms-3">
-                                 <div class="username"><i
-                                       class="fas fa-user"></i> : {{ $user['fields']['nama']['stringValue'] ?? 'No Name' }}
+                                 <div class="username"><i class="fas fa-user"></i> :
+                                    {{ $user['fields']['nama']['stringValue'] ?? 'No Name' }}
                                  </div>
-                                 <div class="no-hp"><i
-                                       class="fas fa-phone"></i> : {{ $user['fields']['no_hp']['stringValue'] ?? '-' }}</div>
+                                 <div class="no-hp"><i class="fas fa-phone"></i> :
+                                    {{ $user['fields']['no_hp']['stringValue'] ?? '-' }}</div>
                               </div>
 
                            </div>

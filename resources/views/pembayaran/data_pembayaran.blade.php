@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('title', 'Data Pembayaran')
 
 @section('content')
    <div class="container mt-4">

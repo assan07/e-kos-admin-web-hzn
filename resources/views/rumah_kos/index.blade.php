@@ -1,3 +1,5 @@
+@extends('layouts.app')
+@section('title', 'Data Rumah Kos')
 @push('styles')
    <style>
       .table-hover tbody tr:hover {
@@ -21,7 +23,6 @@
    </style>
 @endpush
 
-@extends('layouts.app')
 @section('content')
    <div class="container-fluid px-4 py-4">
       {{-- Header Section --}}
@@ -102,7 +103,7 @@
                                  {{ \Carbon\Carbon::parse($kos['updated_at'])->format('H:i') }}</div>
                            </td>
                            <td class="text-center">
-                              <div class="btn-group d-flex gap-2" role="group" >
+                              <div class="btn-group d-flex gap-2" role="group">
                                  <a href="{{ route('rumah_kos.edit', $kos['id']) }}" class="btn btn-sm btn-warning"
                                     title="Edit">
                                     <i class="fas fa-edit"></i>

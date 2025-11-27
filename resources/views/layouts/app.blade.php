@@ -43,7 +43,7 @@
    <link rel="stylesheet" href="{{ asset('assets/css/kaiadmin.min.css') }}" />
    @stack('styles')
 
-   <title>E kos </title>
+   <title>E-Kos - @yield('title')</title>
 </head>
 
 <body>

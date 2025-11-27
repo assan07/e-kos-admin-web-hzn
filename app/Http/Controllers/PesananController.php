@@ -24,12 +24,10 @@ class PesananController extends Controller
         } catch (\Exception $e) {
             $collection = [];
         }
+
         $pesanan = [];
 
-        Log::info('Pesanan Collection:', $collection);
-
         foreach ($collection as $doc) {
-            // idDoc di Firestore ada di akhir path 'name'
             $pathParts = explode('/', $doc['name']);
             $idDoc = end($pathParts);
 
@@ -40,17 +38,35 @@ class PesananController extends Controller
                 'nama'      => $fields['nama']['stringValue'] ?? '-',
                 'kos'       => $fields['kos']['stringValue'] ?? '-',
                 'kamar'     => $fields['kamar']['stringValue'] ?? '-',
-                'harga'     => isset($fields['harga']['integerValue']) ? (int)$fields['harga']['integerValue'] : 0,
+                'harga'     => isset($fields['harga']['integerValue'])
+                    ? (int)$fields['harga']['integerValue']
+                    : 0,
                 'no_hp'     => $fields['no_hp']['stringValue'] ?? '-',
                 'status'    => $fields['status']['stringValue'] ?? 'diproses',
-                'timestamp' => isset($fields['timestamp']['timestampValue']) ? \Carbon\Carbon::parse($fields['timestamp']['timestampValue'])->format('Y-m-d') : '-',
+                'timestamp' => isset($fields['timestamp']['timestampValue'])
+                    ? \Carbon\Carbon::parse($fields['timestamp']['timestampValue'])->format('Y-m-d')
+                    : '-',
                 'foto_ktp'  => $fields['foto_ktp']['stringValue'] ?? null,
                 'user_id'   => $fields['user_id']['stringValue'] ?? null,
             ];
         }
 
-        return view('pesanan.pesan_kamar', compact('pesanan'));
+        // card summary counts
+        $totalPesanan = count($pesanan);
+
+        $totalDiproses = count(array_filter($pesanan, fn($p) => $p['status'] === 'diproses'));
+        $totalDiterima = count(array_filter($pesanan, fn($p) => $p['status'] === 'diterima'));
+        $totalDitolak  = count(array_filter($pesanan, fn($p) => $p['status'] === 'ditolak'));
+
+        return view('pesanan.pesan_kamar', compact(
+            'pesanan',
+            'totalPesanan',
+            'totalDiproses',
+            'totalDiterima',
+            'totalDitolak'
+        ));
     }
+
 
     // Menampilkan detail pesanan
     public function detail($idDoc)
